@@ -205,6 +205,44 @@ namespace GamiPort.Areas.MiniGame.Controllers
 		}
 
 		/// <summary>
+		/// POST: 更新寵物名稱
+		/// </summary>
+		[HttpPost]
+		public async Task<IActionResult> UpdateName(string newName)
+		{
+			// 檢查登入狀態
+			if (User.Identity?.IsAuthenticated != true)
+			{
+				return Json(new { success = false, message = "請先登入" });
+			}
+
+			var userId = _appCurrentUser.UserId;
+			if (userId <= 0)
+			{
+				return Json(new { success = false, message = "請先登入" });
+			}
+
+			// 執行名稱更新
+			var result = await _petService.UpdatePetNameAsync(userId, newName);
+
+			if (!result.Success)
+			{
+				return Json(new { success = false, message = result.Message });
+			}
+
+			return Json(new
+			{
+				success = true,
+				message = result.Message,
+				pet = new
+				{
+					petId = result.Pet?.PetId,
+					petName = result.Pet?.PetName
+				}
+			});
+		}
+
+		/// <summary>
 		/// 獲取寵物健康狀態描述
 		/// </summary>
 		private string GetHealthStatus(Pet? pet)

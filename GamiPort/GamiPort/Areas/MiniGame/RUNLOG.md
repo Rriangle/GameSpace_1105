@@ -710,6 +710,99 @@ Build succeeded.
 
 ---
 
+### 02:00 - Task 1.4: 寵物名稱修改功能 ✅
+
+**目標**:
+- 實作寵物名稱修改功能（寵物功能 3.3.1）
+
+**動作**:
+1. ✅ 檢查 Pet 表欄位 - 確認 PetName 欄位存在（varchar(50), non-nullable）
+2. ✅ 檢查 IPetService/PetService - 確認無現有名稱修改方法
+3. ✅ 新增 UpdatePetNameAsync 方法到 IPetService
+4. ✅ 新增 PetUpdateNameResult class 到 IPetService
+5. ✅ 實作 UpdatePetNameAsync 到 PetService（驗證、更新、錯誤處理）
+6. ✅ 新增 UpdateName POST action 到 PetController
+7. ✅ 修改 Pet/Index.cshtml - 添加名稱修改 UI（按鈕 + Modal）
+8. ✅ 添加 JavaScript 函數處理名稱更新（AJAX）
+9. ✅ 測試編譯 (dotnet build error = 0)
+
+**變更檔案**:
+- `Services/IPetService.cs` (+17 行)
+  - 新增 UpdatePetNameAsync(int userId, string newName) 方法簽名
+  - 新增 PetUpdateNameResult class（Success, Message, Pet）
+
+- `Services/PetService.cs` (+75 行)
+  - 實作 UpdatePetNameAsync:
+    - 名稱驗證（非空、長度 1-20 字元）
+    - 獲取用戶寵物（FirstOrDefaultAsync）
+    - 檢查寵物存在性
+    - 檢查名稱是否相同（避免無意義更新）
+    - 更新 PetName 屬性
+    - SaveChangesAsync
+    - 錯誤處理 (try-catch)
+  - 回傳 PetUpdateNameResult
+
+- `Controllers/PetController.cs` (+38 行)
+  - 新增 UpdateName POST action:
+    - 驗證登入狀態
+    - 獲取 userId
+    - 調用 _petService.UpdatePetNameAsync
+    - 回傳 JSON {success, message, pet}
+
+- `Views/Pet/Index.cshtml` (+103 行 + 重構 1 行)
+  - Line 364-369: 重構寵物名稱顯示區域
+    - 原本：`<h3 class="mb-3 fw-bold">@Model.PetName</h3>`
+    - 修改為：flex 容器包含 h3 + 編輯按鈕
+    - 按鈕觸發 Bootstrap Modal (#updateNameModal)
+  - Line 640-672: 新增 UpdateName Modal
+    - Modal Header: 淡藍漸層背景 (#17a2b8 → #0d9488)
+    - Input: 預填當前名稱，maxlength=20
+    - Alert 區域顯示結果訊息
+    - 確認按鈕觸發 updatePetName()
+  - Line 106-115: 新增 CSS 樣式
+    - .btn-outline-teal: 淡藍邊框按鈕樣式
+    - hover 效果：填充背景色
+  - Line 807-874: 新增 JavaScript 函數
+    - updatePetName(): AJAX POST 到 /MiniGame/Pet/UpdateName
+    - 客戶端驗證（長度 1-20）
+    - Loading 狀態處理
+    - 成功後更新 UI（h3 文字內容）
+    - 1.5 秒後自動關閉 Modal
+    - showNameUpdateAlert(): 顯示訊息（成功/錯誤）
+
+**DB 對接**:
+- `Pet`: PetName (varchar(50), NOT NULL)
+  - 無額外欄位或時間戳記錄名稱變更
+  - 直接更新 PetName 欄位即可
+
+**關鍵技術細節**:
+- **無交易需求**: 單一表更新，無需 BeginTransactionAsync
+- **名稱驗證**: 前後端雙重驗證（長度 1-20）
+- **UI/UX**: Modal 彈出編輯、即時更新顯示、成功訊息
+- **AJAX**: Fetch API + application/x-www-form-urlencoded
+- **Bootstrap 5**: Modal.getInstance() 控制 Modal 關閉
+
+**原因與理由**:
+- 對應需求：HANDOFF.md Phase 1 - Task 1.4（MEDIUM Priority）
+- 對應寵物功能 3.3.1：「寵物名字修改」
+- 完整閉環：Service → Controller → View → AJAX → 即時更新
+- Hierarchy: 實際 DB schema (PetName varchar(50)) > 前台開發藍圖 > 文檔描述
+
+**狀態**: 已完成 ✅
+
+**編譯結果**:
+```
+建置成功。
+78 個警告（既有項目，主要為 nullable reference warnings）
+0 個錯誤 ✓
+```
+
+**下一步**:
+- Git commit & push 備份
+- 繼續 Phase 1 - Task 1.5（簽到功能前台實作）
+
+---
+
 ## 執行記錄模板
 
 ### YYYY-MM-DD HH:MM - [標題]

@@ -278,6 +278,82 @@ namespace GamiPort.Areas.MiniGame.Services
 		}
 
 		/// <summary>
+		/// 修改寵物名稱
+		/// </summary>
+		public async Task<PetUpdateNameResult> UpdatePetNameAsync(int userId, string newName)
+		{
+			// 驗證名稱
+			if (string.IsNullOrWhiteSpace(newName))
+			{
+				return new PetUpdateNameResult
+				{
+					Success = false,
+					Message = "寵物名稱不能為空"
+				};
+			}
+
+			// 名稱長度驗證（1-20字元）
+			newName = newName.Trim();
+			if (newName.Length < 1 || newName.Length > 20)
+			{
+				return new PetUpdateNameResult
+				{
+					Success = false,
+					Message = "寵物名稱長度必須為 1-20 字元"
+				};
+			}
+
+			// 獲取用戶的寵物
+			var pet = await _context.Pets
+				.FirstOrDefaultAsync(p => p.UserId == userId && !p.IsDeleted);
+
+			if (pet == null)
+			{
+				return new PetUpdateNameResult
+				{
+					Success = false,
+					Message = "未找到寵物信息"
+				};
+			}
+
+			// 檢查名稱是否與當前名稱相同
+			if (pet.PetName == newName)
+			{
+				return new PetUpdateNameResult
+				{
+					Success = true,
+					Message = "名稱未變更",
+					Pet = pet
+				};
+			}
+
+			try
+			{
+				// 更新名稱
+				pet.PetName = newName;
+
+				// 保存更改
+				_context.Pets.Update(pet);
+				await _context.SaveChangesAsync();
+
+				return new PetUpdateNameResult
+				{
+					Success = true,
+					Message = "寵物名稱更新成功",
+					Pet = pet
+				};
+			}
+			catch (Exception ex)
+			{
+				return new PetUpdateNameResult
+				{
+					Success = false,
+					Message = $"名稱更新失敗：{ex.Message}"
+				};
+			}
+		}
+
+		/// <summary>
 		/// 獲取可用的膚色列表
 		/// </summary>
 		public async Task<IEnumerable<PetSkinColorCostSetting>> GetAvailableSkinsAsync()

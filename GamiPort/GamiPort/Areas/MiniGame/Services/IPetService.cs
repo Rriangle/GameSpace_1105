@@ -65,6 +65,14 @@ namespace GamiPort.Areas.MiniGame.Services
 		/// <param name="level">等級</param>
 		/// <returns>所需經驗值（0表示已達最高等級）</returns>
 		Task<int> GetRequiredExpForLevelAsync(int level);
+
+		/// <summary>
+		/// 修改寵物名稱
+		/// </summary>
+		/// <param name="userId">用戶ID</param>
+		/// <param name="newName">新名稱</param>
+		/// <returns>操作結果</returns>
+		Task<PetUpdateNameResult> UpdatePetNameAsync(int userId, string newName);
 	}
 
 	/// <summary>
@@ -81,6 +89,16 @@ namespace GamiPort.Areas.MiniGame.Services
 	/// 寵物外觀更新結果
 	/// </summary>
 	public class PetUpdateAppearanceResult
+	{
+		public bool Success { get; set; }
+		public string Message { get; set; } = string.Empty;
+		public Pet? Pet { get; set; }
+	}
+
+	/// <summary>
+	/// 寵物名稱更新結果
+	/// </summary>
+	public class PetUpdateNameResult
 	{
 		public bool Success { get; set; }
 		public string Message { get; set; } = string.Empty;

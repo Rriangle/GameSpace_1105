@@ -103,6 +103,17 @@
             color: white;
         }
 
+        .btn-outline-teal {
+            color: #17a2b8;
+            border-color: #17a2b8;
+        }
+
+        .btn-outline-teal:hover {
+            background-color: #17a2b8;
+            color: white;
+            border-color: #17a2b8;
+        }
+
         .info-card {
             background: #e0f2f1;
             border-left: 4px solid #17a2b8;
@@ -361,7 +372,12 @@
                                     <i class="bi bi-heart-fill text-white"></i>
                                 </div>
 
-                                <h3 class="mb-3 fw-bold">@Model.PetName</h3>
+                                <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
+                                    <h3 class="mb-0 fw-bold">@Model.PetName</h3>
+                                    <button class="btn btn-sm btn-outline-teal" data-bs-toggle="modal" data-bs-target="#updateNameModal" title="修改寵物名稱">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </div>
 
                                 <!-- Experience Bar -->
                                 <div class="mb-4">
@@ -631,6 +647,40 @@
             }
         </div>
     </div>
+
+    <!-- Update Name Modal -->
+    @if (Model != null)
+    {
+        <div class="modal fade" id="updateNameModal" tabindex="-1" aria-labelledby="updateNameModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8 0%, #0d9488 100%); color: white;">
+                        <h5 class="modal-title" id="updateNameModalLabel">
+                            <i class="bi bi-pencil-square me-2"></i>修改寵物名稱
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="newPetName" class="form-label fw-bold">新名稱</label>
+                            <input type="text" class="form-control" id="newPetName" placeholder="請輸入新的寵物名稱" maxlength="20" value="@Model.PetName">
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                寵物名稱長度限制為 1-20 字元
+                            </div>
+                        </div>
+                        <div id="updateNameAlert" class="alert d-none" role="alert"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-teal" id="confirmUpdateNameBtn" onclick="updatePetName()">
+                            <i class="bi bi-check-circle me-1"></i>確認修改
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }
     <script>
         // Interaction configuration
@@ -763,6 +813,78 @@
         document.addEventListener('DOMContentLoaded', function () {
             // TODO: Fetch cooldown status from server
             // /MiniGame/Pet/GetCooldownStatus
+        });
+
+        // Update pet name function
+        async function updatePetName() {
+            const newName = document.getElementById('newPetName').value.trim();
+            const alertDiv = document.getElementById('updateNameAlert');
+            const confirmBtn = document.getElementById('confirmUpdateNameBtn');
+
+            // Validate name
+            if (!newName) {
+                showNameUpdateAlert('danger', '寵物名稱不能為空');
+                return;
+            }
+
+            if (newName.length < 1 || newName.length > 20) {
+                showNameUpdateAlert('danger', '寵物名稱長度必須為 1-20 字元');
+                return;
+            }
+
+            // Disable button and show loading
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>更新中...';
+
+            try {
+                const response = await fetch('/MiniGame/Pet/UpdateName', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `newName=${encodeURIComponent(newName)}`
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update UI - find the h3 with pet name
+                    const petNameElement = document.querySelector('.pet-card-header + .card-body .d-flex.align-items-center h3');
+                    if (petNameElement) {
+                        petNameElement.textContent = result.pet.petName;
+                    }
+
+                    // Show success message
+                    showNameUpdateAlert('success', result.message);
+
+                    // Close modal after 1.5 seconds
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('updateNameModal'));
+                        modal.hide();
+                        alertDiv.classList.add('d-none');
+                    }, 1500);
+                } else {
+                    showNameUpdateAlert('danger', result.message);
+                }
+            } catch (error) {
+                console.error('Update name error:', error);
+                showNameUpdateAlert('danger', '名稱更新失敗，請重試');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>確認修改';
+            }
+        }
+
+        function showNameUpdateAlert(type, message) {
+            const alertDiv = document.getElementById('updateNameAlert');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            alertDiv.classList.remove('d-none');
+        }
+
+        // Clear alert when modal is opened
+        document.getElementById('updateNameModal')?.addEventListener('show.bs.modal', function () {
+            document.getElementById('updateNameAlert').classList.add('d-none');
         });
     </script>
 }
