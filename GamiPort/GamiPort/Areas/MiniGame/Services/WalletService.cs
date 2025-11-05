@@ -524,5 +524,311 @@ namespace GamiPort.Areas.MiniGame.Services
 				return (Enumerable.Empty<WalletHistory>(), 0);
 			}
 		}
+
+		/// <summary>
+		/// 使用點數兌換優惠券
+		/// </summary>
+		public async Task<(bool success, string message, List<string> couponCodes)> ExchangeForCouponAsync(
+			int userId,
+			int couponTypeId,
+			int quantity = 1)
+		{
+			using var transaction = await _context.Database.BeginTransactionAsync();
+			try
+			{
+				// 1. 驗證數量
+				if (quantity <= 0 || quantity > 100)
+				{
+					return (false, "兌換數量必須在 1-100 之間", new List<string>());
+				}
+
+				// 2. 查詢優惠券類型
+				var couponType = await _context.CouponTypes
+					.AsNoTracking()
+					.FirstOrDefaultAsync(ct => ct.CouponTypeId == couponTypeId && !ct.IsDeleted);
+
+				if (couponType == null)
+				{
+					_logger.LogWarning("優惠券類型不存在: CouponTypeId={CouponTypeId}", couponTypeId);
+					await transaction.RollbackAsync();
+					return (false, "優惠券類型不存在", new List<string>());
+				}
+
+				// 3. 檢查有效期
+				var nowUtc8 = _appClock.ToAppTime(_appClock.UtcNow);
+				if (couponType.ValidTo < nowUtc8)
+				{
+					await transaction.RollbackAsync();
+					return (false, $"優惠券類型「{couponType.Name}」已過期", new List<string>());
+				}
+
+				// 4. 計算所需點數
+				int totalPointsRequired = couponType.PointsCost * quantity;
+
+				// 5. 查詢用戶錢包
+				var wallet = await _context.UserWallets
+					.FirstOrDefaultAsync(w => w.UserId == userId && !w.IsDeleted);
+
+				if (wallet == null)
+				{
+					_logger.LogWarning("用戶錢包不存在: UserId={UserId}", userId);
+					await transaction.RollbackAsync();
+					return (false, "錢包不存在", new List<string>());
+				}
+
+				// 6. 檢查點數是否足夠
+				if (wallet.UserPoint < totalPointsRequired)
+				{
+					await transaction.RollbackAsync();
+					return (false, $"點數不足，需要 {totalPointsRequired} 點，目前只有 {wallet.UserPoint} 點", new List<string>());
+				}
+
+				// 7. 扣除點數
+				wallet.UserPoint -= totalPointsRequired;
+
+				// 8. 生成優惠券
+				var generatedCodes = new List<string>();
+				for (int i = 0; i < quantity; i++)
+				{
+					var couponCode = GenerateUniqueCouponCode();
+					var coupon = new Coupon
+					{
+						CouponCode = couponCode,
+						CouponTypeId = couponTypeId,
+						UserId = userId,
+						IsUsed = false,
+						AcquiredTime = nowUtc8,
+						UsedTime = null,
+						UsedInOrderId = null,
+						IsDeleted = false
+					};
+					_context.Coupons.Add(coupon);
+					generatedCodes.Add(couponCode);
+				}
+
+				// 9. 記錄錢包歷史
+				var history = new WalletHistory
+				{
+					UserId = userId,
+					ChangeType = "Point",
+					PointsChanged = -totalPointsRequired,
+					ItemCode = string.Join(", ", generatedCodes),
+					Description = $"兌換優惠券「{couponType.Name}」x{quantity}",
+					ChangeTime = nowUtc8,
+					IsDeleted = false
+				};
+				_context.WalletHistories.Add(history);
+
+				// 10. 提交事務
+				await _context.SaveChangesAsync();
+				await transaction.CommitAsync();
+
+				_logger.LogInformation(
+					"成功兌換優惠券: UserId={UserId}, CouponTypeId={CouponTypeId}, Quantity={Quantity}, PointsUsed={PointsUsed}",
+					userId, couponTypeId, quantity, totalPointsRequired);
+
+				return (true, $"成功兌換 {quantity} 張優惠券「{couponType.Name}」", generatedCodes);
+			}
+			catch (Exception ex)
+			{
+				await transaction.RollbackAsync();
+				_logger.LogError(ex, "兌換優惠券失敗: UserId={UserId}, CouponTypeId={CouponTypeId}",
+					userId, couponTypeId);
+				return (false, "兌換失敗，請稍後再試", new List<string>());
+			}
+		}
+
+		/// <summary>
+		/// 使用點數兌換電子禮券
+		/// </summary>
+		public async Task<(bool success, string message, List<string> evoucherCodes)> ExchangeForEVoucherAsync(
+			int userId,
+			int evoucherTypeId,
+			int quantity = 1)
+		{
+			using var transaction = await _context.Database.BeginTransactionAsync();
+			try
+			{
+				// 1. 驗證數量
+				if (quantity <= 0 || quantity > 100)
+				{
+					return (false, "兌換數量必須在 1-100 之間", new List<string>());
+				}
+
+				// 2. 查詢電子禮券類型
+				var evoucherType = await _context.EvoucherTypes
+					.AsNoTracking()
+					.FirstOrDefaultAsync(et => et.EvoucherTypeId == evoucherTypeId && !et.IsDeleted);
+
+				if (evoucherType == null)
+				{
+					_logger.LogWarning("電子禮券類型不存在: EVoucherTypeId={EVoucherTypeId}", evoucherTypeId);
+					await transaction.RollbackAsync();
+					return (false, "電子禮券類型不存在", new List<string>());
+				}
+
+				// 3. 檢查庫存
+				if (evoucherType.TotalAvailable < quantity)
+				{
+					await transaction.RollbackAsync();
+					return (false, $"電子禮券「{evoucherType.Name}」庫存不足，剩餘 {evoucherType.TotalAvailable} 張", new List<string>());
+				}
+
+				// 4. 檢查有效期
+				var nowUtc8 = _appClock.ToAppTime(_appClock.UtcNow);
+				if (evoucherType.ValidTo < nowUtc8)
+				{
+					await transaction.RollbackAsync();
+					return (false, $"電子禮券類型「{evoucherType.Name}」已過期", new List<string>());
+				}
+
+				// 5. 計算所需點數
+				int totalPointsRequired = evoucherType.PointsCost * quantity;
+
+				// 6. 查詢用戶錢包
+				var wallet = await _context.UserWallets
+					.FirstOrDefaultAsync(w => w.UserId == userId && !w.IsDeleted);
+
+				if (wallet == null)
+				{
+					_logger.LogWarning("用戶錢包不存在: UserId={UserId}", userId);
+					await transaction.RollbackAsync();
+					return (false, "錢包不存在", new List<string>());
+				}
+
+				// 7. 檢查點數是否足夠
+				if (wallet.UserPoint < totalPointsRequired)
+				{
+					await transaction.RollbackAsync();
+					return (false, $"點數不足，需要 {totalPointsRequired} 點，目前只有 {wallet.UserPoint} 點", new List<string>());
+				}
+
+				// 8. 扣除點數
+				wallet.UserPoint -= totalPointsRequired;
+
+				// 9. 扣除庫存（需要重新載入以更新）
+				var evoucherTypeToUpdate = await _context.EvoucherTypes
+					.FirstOrDefaultAsync(et => et.EvoucherTypeId == evoucherTypeId);
+				if (evoucherTypeToUpdate != null)
+				{
+					evoucherTypeToUpdate.TotalAvailable -= quantity;
+				}
+
+				// 10. 生成電子禮券
+				var generatedCodes = new List<string>();
+				for (int i = 0; i < quantity; i++)
+				{
+					var evoucherCode = GenerateUniqueEVoucherCode();
+					var evoucher = new Evoucher
+					{
+						EvoucherCode = evoucherCode,
+						EvoucherTypeId = evoucherTypeId,
+						UserId = userId,
+						IsUsed = false,
+						AcquiredTime = nowUtc8,
+						UsedTime = null,
+						IsDeleted = false
+					};
+					_context.Evouchers.Add(evoucher);
+					generatedCodes.Add(evoucherCode);
+				}
+
+				// 11. 記錄錢包歷史
+				var history = new WalletHistory
+				{
+					UserId = userId,
+					ChangeType = "Point",
+					PointsChanged = -totalPointsRequired,
+					ItemCode = string.Join(", ", generatedCodes),
+					Description = $"兌換電子禮券「{evoucherType.Name}」x{quantity}",
+					ChangeTime = nowUtc8,
+					IsDeleted = false
+				};
+				_context.WalletHistories.Add(history);
+
+				// 12. 提交事務
+				await _context.SaveChangesAsync();
+				await transaction.CommitAsync();
+
+				_logger.LogInformation(
+					"成功兌換電子禮券: UserId={UserId}, EVoucherTypeId={EVoucherTypeId}, Quantity={Quantity}, PointsUsed={PointsUsed}",
+					userId, evoucherTypeId, quantity, totalPointsRequired);
+
+				return (true, $"成功兌換 {quantity} 張電子禮券「{evoucherType.Name}」", generatedCodes);
+			}
+			catch (Exception ex)
+			{
+				await transaction.RollbackAsync();
+				_logger.LogError(ex, "兌換電子禮券失敗: UserId={UserId}, EVoucherTypeId={EVoucherTypeId}",
+					userId, evoucherTypeId);
+				return (false, "兌換失敗，請稍後再試", new List<string>());
+			}
+		}
+
+		/// <summary>
+		/// 獲取所有可兌換的優惠券類型
+		/// </summary>
+		public async Task<IEnumerable<CouponType>> GetAvailableCouponTypesAsync()
+		{
+			try
+			{
+				var nowUtc8 = _appClock.ToAppTime(_appClock.UtcNow);
+				return await _context.CouponTypes
+					.AsNoTracking()
+					.Where(ct => !ct.IsDeleted && ct.ValidTo >= nowUtc8)
+					.OrderBy(ct => ct.PointsCost)
+					.ToListAsync();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "獲取可兌換優惠券類型失敗");
+				return Enumerable.Empty<CouponType>();
+			}
+		}
+
+		/// <summary>
+		/// 獲取所有可兌換的電子禮券類型
+		/// </summary>
+		public async Task<IEnumerable<EvoucherType>> GetAvailableEVoucherTypesAsync()
+		{
+			try
+			{
+				var nowUtc8 = _appClock.ToAppTime(_appClock.UtcNow);
+				return await _context.EvoucherTypes
+					.AsNoTracking()
+					.Where(et => !et.IsDeleted && et.ValidTo >= nowUtc8 && et.TotalAvailable > 0)
+					.OrderBy(et => et.PointsCost)
+					.ToListAsync();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "獲取可兌換電子禮券類型失敗");
+				return Enumerable.Empty<EvoucherType>();
+			}
+		}
+
+		/// <summary>
+		/// 生成唯一的優惠券代碼
+		/// 格式: CPN-YYYYMM-XXXXXX
+		/// </summary>
+		private string GenerateUniqueCouponCode()
+		{
+			var now = DateTime.Now;
+			var yearMonth = now.ToString("yyyyMM");
+			var random = new Random().Next(100000, 999999);
+			return $"CPN-{yearMonth}-{random}";
+		}
+
+		/// <summary>
+		/// 生成唯一的電子禮券代碼
+		/// 格式: EV-YYYYMM-XXXXXX
+		/// </summary>
+		private string GenerateUniqueEVoucherCode()
+		{
+			var now = DateTime.Now;
+			var yearMonth = now.ToString("yyyyMM");
+			var random = new Random().Next(100000, 999999);
+			return $"EV-{yearMonth}-{random}";
+		}
 	}
 }

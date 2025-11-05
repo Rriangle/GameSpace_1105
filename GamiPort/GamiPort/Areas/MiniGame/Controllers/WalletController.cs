@@ -169,5 +169,133 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				return RedirectToAction("Index");
 			}
 		}
+
+		/// <summary>
+		/// 兌換頁面 - 顯示可兌換的優惠券和電子禮券類型
+		/// </summary>
+		[HttpGet]
+		public async Task<IActionResult> Exchange()
+		{
+			// 檢查登入狀態
+			if (User.Identity?.IsAuthenticated != true)
+			{
+				var returnUrl = "/MiniGame/Wallet/Exchange";
+				return Redirect($"/Login/Login/Login/Login?ReturnUrl={Uri.EscapeDataString(returnUrl)}");
+			}
+
+			try
+			{
+				var userId = _currentUser.UserId;
+				if (userId <= 0)
+				{
+					_logger.LogWarning("無法取得用戶ID");
+					return RedirectToAction("Index");
+				}
+
+				// 獲取當前點數
+				var userPoints = await _walletService.GetUserPointsAsync(userId);
+
+				// 獲取可兌換的優惠券類型
+				var couponTypes = await _walletService.GetAvailableCouponTypesAsync();
+
+				// 獲取可兌換的電子禮券類型
+				var evoucherTypes = await _walletService.GetAvailableEVoucherTypesAsync();
+
+				// 構建視圖模型
+				var viewModel = new Dictionary<string, object>
+				{
+					{ "UserPoints", userPoints },
+					{ "CouponTypes", couponTypes },
+					{ "EVoucherTypes", evoucherTypes }
+				};
+
+				return View(viewModel);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "兌換頁面加載失敗: UserId={UserId}", _currentUser.UserId);
+				return RedirectToAction("Index");
+			}
+		}
+
+		/// <summary>
+		/// 兌換優惠券 - POST
+		/// </summary>
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ExchangeForCoupon(int couponTypeId, int quantity = 1)
+		{
+			// 檢查登入狀態
+			if (User.Identity?.IsAuthenticated != true)
+			{
+				return Json(new { success = false, message = "未登入" });
+			}
+
+			try
+			{
+				var userId = _currentUser.UserId;
+				if (userId <= 0)
+				{
+					return Json(new { success = false, message = "無法取得用戶ID" });
+				}
+
+				// 執行兌換
+				var (success, message, couponCodes) = await _walletService.ExchangeForCouponAsync(userId, couponTypeId, quantity);
+
+				if (success)
+				{
+					_logger.LogInformation("用戶 {UserId} 成功兌換優惠券: CouponTypeId={CouponTypeId}, Quantity={Quantity}",
+						userId, couponTypeId, quantity);
+				}
+
+				return Json(new { success, message, couponCodes });
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "兌換優惠券失敗: UserId={UserId}, CouponTypeId={CouponTypeId}",
+					_currentUser.UserId, couponTypeId);
+				return Json(new { success = false, message = "兌換失敗，請稍後再試" });
+			}
+		}
+
+		/// <summary>
+		/// 兌換電子禮券 - POST
+		/// </summary>
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ExchangeForEVoucher(int evoucherTypeId, int quantity = 1)
+		{
+			// 檢查登入狀態
+			if (User.Identity?.IsAuthenticated != true)
+			{
+				return Json(new { success = false, message = "未登入" });
+			}
+
+			try
+			{
+				var userId = _currentUser.UserId;
+				if (userId <= 0)
+				{
+					return Json(new { success = false, message = "無法取得用戶ID" });
+				}
+
+				// 執行兌換
+				var (success, message, evoucherCodes) = await _walletService.ExchangeForEVoucherAsync(userId, evoucherTypeId, quantity);
+
+				if (success)
+				{
+					_logger.LogInformation("用戶 {UserId} 成功兌換電子禮券: EVoucherTypeId={EVoucherTypeId}, Quantity={Quantity}",
+						userId, evoucherTypeId, quantity);
+				}
+
+				return Json(new { success, message, evoucherCodes });
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "兌換電子禮券失敗: UserId={UserId}, EVoucherTypeId={EVoucherTypeId}",
+					_currentUser.UserId, evoucherTypeId);
+				return Json(new { success = false, message = "兌換失敗，請稍後再試" });
+			}
+		}
 	}
 }

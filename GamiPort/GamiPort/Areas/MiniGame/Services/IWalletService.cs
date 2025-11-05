@@ -93,5 +93,41 @@ namespace GamiPort.Areas.MiniGame.Services
 		DateTime? startDate = null,
 		DateTime? endDate = null,
 		string? searchTerm = null);
+
+	/// <summary>
+	/// 使用點數兌換優惠券
+	/// </summary>
+	/// <param name="userId">用戶ID</param>
+	/// <param name="couponTypeId">優惠券類型ID</param>
+	/// <param name="quantity">兌換數量（預設1）</param>
+	/// <returns>成功兌換的優惠券代碼列表</returns>
+	Task<(bool success, string message, List<string> couponCodes)> ExchangeForCouponAsync(
+		int userId,
+		int couponTypeId,
+		int quantity = 1);
+
+	/// <summary>
+	/// 使用點數兌換電子禮券
+	/// </summary>
+	/// <param name="userId">用戶ID</param>
+	/// <param name="evoucherTypeId">電子禮券類型ID</param>
+	/// <param name="quantity">兌換數量（預設1）</param>
+	/// <returns>成功兌換的電子禮券代碼列表</returns>
+	Task<(bool success, string message, List<string> evoucherCodes)> ExchangeForEVoucherAsync(
+		int userId,
+		int evoucherTypeId,
+		int quantity = 1);
+
+	/// <summary>
+	/// 獲取所有可兌換的優惠券類型
+	/// </summary>
+	/// <returns>優惠券類型列表</returns>
+	Task<IEnumerable<CouponType>> GetAvailableCouponTypesAsync();
+
+	/// <summary>
+	/// 獲取所有可兌換的電子禮券類型
+	/// </summary>
+	/// <returns>電子禮券類型列表</returns>
+	Task<IEnumerable<EvoucherType>> GetAvailableEVoucherTypesAsync();
 	}
 }

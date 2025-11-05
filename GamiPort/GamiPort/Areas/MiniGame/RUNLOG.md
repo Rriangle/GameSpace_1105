@@ -461,6 +461,129 @@ Build succeeded.
 
 ---
 
+---
+
+## 2025-11-06 (台北時間)
+
+### 00:45 - 完成多代理盤點 + 執行計畫制定 ✅
+
+**動作**:
+1. ✅ Agent 1: SQL Server 16張表格 + 種子資料驗證完成
+2. ✅ Agent 2: 前台功能完成度分析完成 (85.7% = 12/14 功能)
+3. ✅ Agent 3: 後台 GameSpace 邏輯分析完成 (模糊搜尋、OR邏輯、5級優先順序)
+4. ✅ Agent 4: 前台開發藍圖文件完整閱讀完成
+5. ✅ 整合所有盤點結果，制定詳細執行計畫
+6. ✅ 更新 HANDOFF.md（Phase 1/2/3 執行計畫、待辦事項清單、DB種子資料摘要）
+7. ✅ Git commit & push
+
+**變更檔案**:
+- `HANDOFF.md` (+252 行)
+  - 新增執行計畫：Phase 1 (8-12h), Phase 2 (5-9h), Phase 3 (4-6h)
+  - 新增 SQL Server 資料庫種子資料摘要
+  - 新增詳細待辦事項清單（12 項 tasks）
+  - 新增執行順序建議表格
+  - 新增執行前檢查清單
+
+**原因與理由**:
+- 完成全面盤點，確保開發方向正確
+- 基於實際 DB 種子資料制定計畫（hierarchy 最高優先級）
+- 識別 4 項缺失功能需補完至 100%
+
+**狀態**: 已完成 ✅
+
+**Git Commit**:
+```
+1936cae - docs(MiniGame): 完成多代理盤點 + 執行計畫制定 (2025-11-06 00:45)
+```
+
+**下一步**:
+- 開始執行 Phase 1 - Task 1.1（點數兌換優惠券/電子禮券）
+
+---
+
+### 01:00 - Task 1.1: 點數兌換優惠券/電子禮券 ✅
+
+**目標**:
+- 實作「使用會員點數兌換商城優惠券及電子優惠券」功能（錢包功能 3.1.2）
+- 補充 Service 介面 + 實作 + Controller + View 完整功能
+
+**動作**:
+1. ✅ 查看 CouponType 和 EVoucherType DB 種子資料（13 columns vs 12 columns）
+2. ✅ 檢查現有 WalletService 兌換相關方法（發現 UseCoupon != Exchange，需新增方法）
+3. ✅ 新增 IWalletService 介面 4 個方法簽名（ExchangeForCoupon/EVoucher + GetAvailable*）
+4. ✅ 實作 WalletService 4 個方法（+307 行）
+5. ✅ 實作 WalletController 3 個 actions（+128 行）
+6. ✅ 創建 Views/Wallet/Exchange.cshtml（完整前端互動）
+7. ✅ 測試編譯 (dotnet build error = 0)
+
+**變更檔案**:
+- `Services/IWalletService.cs` (+40 行)
+  - 新增 ExchangeForCouponAsync(userId, couponTypeId, quantity)
+  - 新增 ExchangeForEVoucherAsync(userId, evoucherTypeId, quantity)
+  - 新增 GetAvailableCouponTypesAsync()
+  - 新增 GetAvailableEVoucherTypesAsync()
+
+- `Services/WalletService.cs` (+307 行)
+  - 實作 ExchangeForCouponAsync:
+    - 10步驟交易流程（驗證 → 扣點 → 生成優惠券 → 記錄 WalletHistory）
+    - 唯一代碼生成：CPN-YYYYMM-XXXXXX
+    - 交易回滾機制
+  - 實作 ExchangeForEVoucherAsync:
+    - 含庫存管理（TotalAvailable -= quantity）
+    - 唯一代碼生成：EV-YYYYMM-XXXXXX
+    - 交易回滾機制
+  - 實作 GetAvailable* 方法（IsActive=true + 有效期驗證）
+
+- `Controllers/WalletController.cs` (+128 行)
+  - Exchange() GET: 顯示可兌換項目頁面（用戶點數 + CouponTypes + EVoucherTypes）
+  - ExchangeForCoupon() POST: 執行優惠券兌換（AJAX JSON 響應）
+  - ExchangeForEVoucher() POST: 執行電子禮券兌換（AJAX JSON 響應）
+
+- `Views/Wallet/Exchange.cshtml` (新建 318 行)
+  - 用戶點數顯示卡片（動態更新）
+  - 優惠券兌換區（卡片式佈局，數量輸入，點數驗證）
+  - 電子禮券兌換區（庫存顯示，售罄禁用）
+  - Bootstrap Modal 顯示兌換結果（成功代碼列表）
+  - 完整 JavaScript 交互（Fetch API + AJAX）
+  - Teal 配色方案（#17a2b8）
+
+**DB 對接**:
+- `CouponType`: 13 columns (CouponTypeId, Name, DiscountType, DiscountValue, **PointsCost**, ValidFrom, ValidTo, Description, IsActive, CreatedBy, CreatedAt, IsDeleted, DeletedAt)
+  - Seed Data: 3 rows (100點折價券, 200點運費券, 300點高階折扣券)
+- `EVoucherType`: 12 columns (EvoucherTypeId, Name, ValueAmount, **PointsCost**, ValidFrom, ValidTo, TotalAvailable, Description, IsActive, CreatedBy, CreatedAt, IsDeleted)
+  - Seed Data: 10 rows (50元~1000元多種面額，總庫存 5-100 張)
+- `Coupon`: IsUsed=false, CouponCode, AcquiredTime, UserId
+- `Evoucher`: IsUsed=false, VoucherCode, AcquiredTime, UserId
+- `WalletHistory`: ChangeType='Coupon'/'EVoucher', Description, PointsChanged(負值)
+
+**關鍵技術細節**:
+- **交易安全**: 使用 Database.BeginTransactionAsync() 確保原子性
+- **唯一代碼**: Random.Next(100000, 999999) + 時間戳（降低碰撞機率）
+- **前端驗證**: JavaScript 檢查點數足夠 + 數量範圍（1-100）+ 庫存限制
+- **用戶體驗**: 即時點數更新、Loading 狀態、成功跳轉按鈕
+- **錯誤處理**: 統一 JSON 格式 {success, message, codes}
+
+**原因與理由**:
+- 對應需求：HANDOFF.md Phase 1 - Task 1.1（HIGH Priority）
+- 對應錢包功能 3.1.2：「使用會員點數兌換商城優惠券及電子優惠券」
+- 完整閉環：Service → Controller → View → AJAX 完整流程
+- Hierarchy: 實際 DB schema (13/12 columns) > 前台開發藍圖 > 文檔描述
+
+**狀態**: 已完成 ✅
+
+**編譯結果**:
+```
+建置成功。
+69 個警告（既有項目）
+0 個錯誤 ✓
+```
+
+**下一步**:
+- Git commit & push 備份
+- 繼續 Phase 1 - Task 1.2（電子禮券 QRCode/Barcode 顯示）
+
+---
+
 ## 執行記錄模板
 
 ### YYYY-MM-DD HH:MM - [標題]
