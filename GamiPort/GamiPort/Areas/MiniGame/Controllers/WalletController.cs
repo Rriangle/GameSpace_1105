@@ -12,6 +12,7 @@ namespace GamiPort.Areas.MiniGame.Controllers
 		private readonly IWalletService _walletService;
 		private readonly IAppCurrentUser _currentUser;
 		private readonly IFuzzySearchService _fuzzySearchService;
+		private readonly IQRCodeService _qrCodeService;
 		private readonly ILogger<WalletController> _logger;
 
 		public WalletController(
@@ -19,12 +20,14 @@ namespace GamiPort.Areas.MiniGame.Controllers
 			IWalletService walletService,
 			IAppCurrentUser currentUser,
 			IFuzzySearchService fuzzySearchService,
+			IQRCodeService qrCodeService,
 			ILogger<WalletController> logger)
 		{
 			_context = context ?? throw new ArgumentNullException(nameof(context));
 			_walletService = walletService ?? throw new ArgumentNullException(nameof(walletService));
 			_currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
 			_fuzzySearchService = fuzzySearchService ?? throw new ArgumentNullException(nameof(fuzzySearchService));
+			_qrCodeService = qrCodeService ?? throw new ArgumentNullException(nameof(qrCodeService));
 			_logger = logger ?? throw new ArgumentNullException(nameof(logger));
 		}
 
@@ -151,14 +154,31 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				// 獲取電子禮券列表（支持模糊搜尋）
 				var eVouchers = await _walletService.GetUserEVouchersAsync(userId, search);
 
+				// 為每張未使用的電子禮券生成 QR Code
+				var eVoucherList = eVouchers.ToList();
+				var qrCodeData = new Dictionary<int, string>();
+
+				foreach (var voucher in eVoucherList.Where(v => !v.IsUsed))
+				{
+					// 生成 QR Code 內容（包含禮券代碼和基本信息）
+					var qrContent = $"EVOUCHER:{voucher.EvoucherCode}|ID:{voucher.EvoucherId}|VALUE:{voucher.EvoucherType?.ValueAmount ?? 0}";
+					var qrCodeBase64 = _qrCodeService.GenerateQRCodeBase64(qrContent, 15);
+
+					if (!string.IsNullOrEmpty(qrCodeBase64))
+					{
+						qrCodeData[voucher.EvoucherId] = qrCodeBase64;
+					}
+				}
+
 				// 構建視圖數據
 				var viewData = new
 				{
-					EVouchers = eVouchers,
+					EVouchers = eVoucherList,
+					QRCodeData = qrCodeData,
 					SearchTerm = search,
-					TotalCount = eVouchers.Count(),
-					UnusedCount = eVouchers.Count(e => !e.IsUsed),
-					UsedCount = eVouchers.Count(e => e.IsUsed)
+					TotalCount = eVoucherList.Count,
+					UnusedCount = eVoucherList.Count(e => !e.IsUsed),
+					UsedCount = eVoucherList.Count(e => e.IsUsed)
 				};
 
 				return View(viewData);
@@ -295,6 +315,87 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				_logger.LogError(ex, "兌換電子禮券失敗: UserId={UserId}, EVoucherTypeId={EVoucherTypeId}",
 					_currentUser.UserId, evoucherTypeId);
 				return Json(new { success = false, message = "兌換失敗，請稍後再試" });
+			}
+		}
+
+		/// <summary>
+		/// 錢包交易歷史 - 支持分頁、篩選、模糊搜尋
+		/// </summary>
+		[HttpGet]
+		public async Task<IActionResult> History(
+			int pageNumber = 1,
+			int pageSize = 20,
+			string? changeType = null,
+			DateTime? startDate = null,
+			DateTime? endDate = null,
+			string? searchTerm = null)
+		{
+			// 檢查登入狀態
+			if (User.Identity?.IsAuthenticated != true)
+			{
+				var returnUrl = "/MiniGame/Wallet/History";
+				return Redirect($"/Login/Login/Login/Login?ReturnUrl={Uri.EscapeDataString(returnUrl)}");
+			}
+
+			try
+			{
+				var userId = _currentUser.UserId;
+				if (userId <= 0)
+				{
+					_logger.LogWarning("無法取得用戶ID");
+					return RedirectToAction("Index");
+				}
+
+				// 驗證分頁參數
+				if (pageNumber < 1) pageNumber = 1;
+				if (pageSize < 10) pageSize = 10;
+				if (pageSize > 200) pageSize = 200;
+
+				// 獲取交易歷史（分頁、篩選、模糊搜尋）
+				var (items, totalCount) = await _walletService.GetWalletHistoryAsync(
+					userId,
+					pageNumber,
+					pageSize,
+					changeType,
+					startDate,
+					endDate,
+					searchTerm);
+
+				// 計算分頁信息
+				var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+				// 獲取用戶當前點數
+				var currentPoints = await _walletService.GetUserPointsAsync(userId);
+
+				// 構建視圖模型
+				var viewModel = new
+				{
+					Items = items.ToList(),
+					CurrentPoints = currentPoints,
+					Pagination = new
+					{
+						PageNumber = pageNumber,
+						PageSize = pageSize,
+						TotalCount = totalCount,
+						TotalPages = totalPages,
+						HasPreviousPage = pageNumber > 1,
+						HasNextPage = pageNumber < totalPages
+					},
+					Filters = new
+					{
+						ChangeType = changeType,
+						StartDate = startDate,
+						EndDate = endDate,
+						SearchTerm = searchTerm
+					}
+				};
+
+				return View(viewModel);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "錢包交易歷史加載失敗: UserId={UserId}", _currentUser.UserId);
+				return RedirectToAction("Index");
 			}
 		}
 	}

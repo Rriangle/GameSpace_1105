@@ -54,7 +54,7 @@
 									<p class="card-text">
 										<strong>折扣值:</strong> @coupon.DiscountValue<br />
 										<strong>所需點數:</strong> <span class="text-danger fw-bold">@coupon.PointsCost</span> 點<br />
-										<strong>有效期:</strong> @coupon.ValidFrom?.ToString("yyyy/MM/dd") ~ @coupon.ValidTo?.ToString("yyyy/MM/dd")
+										<strong>有效期:</strong> @(((DateTime?)coupon.ValidFrom)?.ToString("yyyy/MM/dd") ?? "-") ~ @(((DateTime?)coupon.ValidTo)?.ToString("yyyy/MM/dd") ?? "-")
 									</p>
 									@if (!string.IsNullOrEmpty(coupon.Description))
 									{
@@ -107,7 +107,7 @@
 										<strong>面額:</strong> <span class="text-success fw-bold">$@evoucher.ValueAmount</span><br />
 										<strong>所需點數:</strong> <span class="text-danger fw-bold">@evoucher.PointsCost</span> 點<br />
 										<strong>剩餘數量:</strong> @evoucher.TotalAvailable 張<br />
-										<strong>有效期:</strong> @evoucher.ValidFrom?.ToString("yyyy/MM/dd") ~ @evoucher.ValidTo?.ToString("yyyy/MM/dd")
+										<strong>有效期:</strong> @(((DateTime?)evoucher.ValidFrom)?.ToString("yyyy/MM/dd") ?? "-") ~ @(((DateTime?)evoucher.ValidTo)?.ToString("yyyy/MM/dd") ?? "-")
 									</p>
 									@if (!string.IsNullOrEmpty(evoucher.Description))
 									{

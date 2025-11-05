@@ -32,6 +32,9 @@ namespace GamiPort.Areas.MiniGame.config
 			// ==================== 基礎設施服務 ====================
 			// 註冊模糊搜尋服務（5 級優先順序匹配）
 			services.AddScoped<IFuzzySearchService, FuzzySearchService>();
+
+			// 註冊 QR Code 生成服務（電子禮券核銷）
+			services.AddScoped<IQRCodeService, QRCodeService>();
 			// =========================================================================
 
 			// ==================== 寵物系統 ====================

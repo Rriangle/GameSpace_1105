@@ -584,6 +584,132 @@ Build succeeded.
 
 ---
 
+### 01:30 - Tasks 1.2 & 1.3: 電子禮券 QRCode 顯示 + 錢包交易歷史 ✅
+
+**目標**:
+- Task 1.2: 實作電子禮券 QRCode/Barcode 顯示予店員核銷（錢包功能 3.1.5）
+- Task 1.3: 實作錢包交易歷史頁面（分頁、篩選、模糊搜尋）（錢包功能 3.1.6）
+
+**動作**:
+1. ✅ 安裝 QRCoder NuGet package (v1.7.0)
+2. ✅ 創建 IQRCodeService 介面（GenerateQRCodeBase64/Bytes）
+3. ✅ 實作 QRCodeService（QRCoder 套件整合）
+4. ✅ 註冊 QRCodeService 到 ServiceExtensions.cs
+5. ✅ 修改 WalletController.EVouchers - 生成每張未使用禮券的 QR Code
+6. ✅ 重寫 EVouchers.cshtml - 顯示 QR Code（卡片內嵌 + Modal 放大）
+7. ✅ 實作 WalletController.History - 支援分頁、篩選、模糊搜尋
+8. ✅ 創建 History.cshtml - 完整交易歷史 UI（表格 + 分頁控制）
+9. ✅ 修復編譯錯誤（DateTime nullable、Evoucher 欄位名稱、option selected 語法）
+10. ✅ 測試編譯 (dotnet build error = 0)
+
+**變更檔案**:
+- `GamiPort.csproj` (修改)
+  - 新增 QRCoder 1.7.0 NuGet package
+
+- `Services/IQRCodeService.cs` (新建 23 行)
+  - GenerateQRCodeBase64(string content, int pixelsPerModule = 20)
+  - GenerateQRCodeBytes(string content, int pixelsPerModule = 20)
+
+- `Services/QRCodeService.cs` (新建 97 行)
+  - 使用 QRCoder 套件生成 QR Code
+  - 錯誤容錯等級：Q (25% 修復能力)
+  - 參數驗證：pixelsPerModule 範圍 1-100
+  - 回傳 Base64 格式：data:image/png;base64,...
+
+- `config/ServiceExtensions.cs` (+3 行)
+  - 註冊 QRCodeService 為 Scoped 服務
+
+- `Controllers/WalletController.cs` (+93 行)
+  - 新增 IQRCodeService 依賴注入
+  - 修改 EVouchers action: 為每張未使用電子禮券生成 QR Code
+    - QR Content 格式：EVOUCHER:{code}|ID:{id}|VALUE:{amount}
+    - pixelsPerModule = 15（適合卡片顯示）
+    - 傳遞 Dictionary<int, string> qrCodeData 給 View
+  - 新增 History action (+80 行):
+    - 支援 6 個查詢參數（pageNumber, pageSize, changeType, startDate, endDate, searchTerm）
+    - 參數驗證（pageSize 限制 10-200）
+    - 調用 WalletService.GetWalletHistoryAsync（增強版）
+    - 計算分頁信息（totalPages, hasPreviousPage, hasNextPage）
+    - 回傳 anonymous object viewModel
+
+- `Views/Wallet/EVouchers.cshtml` (重寫 255 行)
+  - 統計卡片：總計、可使用、已使用
+  - 搜尋區域：模糊搜尋表單
+  - 電子禮券卡片列表：
+    - 卡片內嵌小尺寸 QR Code（200px）
+    - 面額顯示（$ValueAmount）
+    - 有效期限（EvoucherType.ValidFrom ~ ValidTo）
+    - 使用狀態badge（可使用/已使用）
+  - QR Code Modal:
+    - 點擊按鈕放大顯示 QR Code（350px）
+    - 顯示禮券代碼和面額
+    - Bootstrap 5 Modal
+
+- `Views/Wallet/History.cshtml` (新建 324 行)
+  - 當前點數卡片
+  - 篩選器區域：
+    - 交易類型下拉選單（全部/點數/優惠券/電子禮券）
+    - 日期範圍選擇器（startDate, endDate）
+    - 每頁筆數選擇（10/20/50/100）
+    - 模糊搜尋輸入框（Description 或 ItemCode）
+    - 5 級模糊搜尋提示
+  - 交易記錄表格：
+    - 時間（yyyy-MM-dd HH:mm:ss）
+    - 類型 badge（點數/優惠券/電子禮券）
+    - 點數變動（正數綠色↑，負數紅色↓）
+    - 項目代碼（code）
+    - 描述
+  - 分頁控制：
+    - 第一頁、上一頁、頁碼、下一頁、最後一頁
+    - 顯示 pageNumber ± 2 的頁碼
+    - BuildPageUrl helper function（保留所有篩選參數）
+  - JavaScript:
+    - 篩選器變更自動重置頁碼為 1
+    - pageSize 變更自動提交表單
+
+**DB 對接**:
+- `Evoucher`: EvoucherId, EvoucherCode, EvoucherTypeId, UserId, IsUsed, AcquiredTime, UsedTime
+- `EvoucherType`: Name, ValueAmount, ValidFrom, ValidTo, PointsCost, Description
+- `WalletHistory`: UserId, ChangeType, PointsChanged, ItemCode, Description, ChangeTime
+
+**關鍵技術細節**:
+- **QR Code 生成**: QRCoder library, ECCLevel.Q, PNG format, Base64 encoding
+- **QR Content 格式**: Pipe-separated key-value pairs（易於掃描解析）
+- **前端顯示**: <img src="data:image/png;base64,..."> 直接嵌入
+- **分頁計算**: totalPages = Ceiling(totalCount / pageSize)
+- **URL 構建**: BuildPageUrl helper 保留所有篩選參數（changeType, dates, search）
+- **Razor option selected**: 使用 selected="@(bool)" 而不是 @(bool ? "selected" : "")
+- **欄位名稱**: Evoucher.EvoucherCode（不是 VoucherCode）、ValidFrom/ValidTo 在 EvoucherType 中
+
+**編譯錯誤修復**:
+1. DateTime nullable 問題：使用 ((DateTime?)field)?.ToString()
+2. Evoucher 欄位名稱：VoucherCode → EvoucherCode
+3. ValidFrom/ValidTo：移至 voucher.EvoucherType.ValidFrom
+4. Razor option selected：@(bool ? "selected" : "") → selected="@(bool)"
+5. Razor <br /> 解析：在 Razor 表達式後需要包裝在 HTML 元素中
+
+**原因與理由**:
+- 對應需求：HANDOFF.md Phase 1 - Tasks 1.2 & 1.3（HIGH Priority）
+- 對應錢包功能 3.1.5：「使用電子優惠券（以 QRCode/Barcode 顯示予店員核銷）」
+- 對應錢包功能 3.1.6：「查看收支明細（點數得到/花費、商城優惠券得到/使用、電子優惠券得到/使用之時間/點數/張數/種類…）」
+- 完整閉環：Service → Controller → View → QR Code 生成 → 掃描核銷流程
+- Hierarchy: 實際 DB schema (Evoucher/EvoucherType) > 前台開發藍圖 > 文檔描述
+
+**狀態**: 已完成 ✅
+
+**編譯結果**:
+```
+建置成功。
+78 個警告（既有項目）
+0 個錯誤 ✓
+```
+
+**下一步**:
+- Git commit & push 備份
+- 繼續 Phase 1 - Task 1.4（寵物名稱修改功能）
+
+---
+
 ## 執行記錄模板
 
 ### YYYY-MM-DD HH:MM - [標題]
