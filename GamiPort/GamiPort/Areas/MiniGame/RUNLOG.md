@@ -799,7 +799,74 @@ Build succeeded.
 
 **下一步**:
 - Git commit & push 備份
-- 繼續 Phase 1 - Task 1.5（簽到功能前台實作）
+- 繼續 Phase 2 - Task 2.1（簽到規則預覽功能）
+
+---
+
+### 02:15 - Task 2.1: 簽到規則預覽功能（第14項功能）✅
+
+**目標**:
+- 實作簽到規則預覽頁面，讓用戶可以查看所有活動簽到規則
+- 完成後總體功能達成率 100% (14/14)
+
+**發現狀況**:
+經過檢查發現所有代碼已完整實作：
+1. ✅ Service: `SignInService.GetAllActiveRulesAsync()` 已實作（查詢所有活動規則，按日序號排序）
+2. ✅ Controller: `SignInController.Rules()` action 已實作（不需登入即可查看）
+3. ✅ ViewModel: `SignInRulesViewModel` 已定義（包含規則列表）
+4. ✅ View: `Views/SignIn/Rules.cshtml` 已完整實作（252行，精美卡片式布局）
+
+**View 功能特點**:
+- 統計卡片：顯示獎勵階段總數、總點數獎勵、總經驗值獎勵
+- 規則說明區域：5點說明（連續簽到、中斷重置、優惠券限量等）
+- 卡片式規則列表：每個規則一個卡片（響應式 3列/2列/1列）
+- 特別獎勵標記：第7天和第30天顯示「特別獎勵」Badge
+- 豐富視覺設計：
+  - 漸層背景（淡藍主色 #17a2b8）
+  - 卡片懸停效果（向上移動 + 陰影增強）
+  - Badge 脈動動畫
+  - 響應式設計（768px 斷點）
+- 獎勵展示：
+  - 點數獎勵：橘色主題 (#ffa500) + 金幣圖示
+  - 經驗值獎勵：綠色主題 (#28a745) + 星星圖示
+  - 優惠券獎勵：淡藍主題 (#17a2b8) + 禮物圖示
+
+**DB 對接**:
+- `SignInRule`: 查詢所有 IsActive=true 且 IsDeleted=false 的規則
+- 欄位：SignInDay, Points, Experience, HasCoupon, CouponTypeCode, Description
+- 按 SignInDay 排序（第1天到第30天）
+
+**關鍵技術細節**:
+- **不需登入**: Rules 頁面是公開的，任何人都可查看
+- **Service 方法**: 使用 AsNoTracking() 提升查詢效能
+- **DTO 轉換**: SignInRule entity → SignInRuleDto
+- **Razor 語法**: 使用 switch expression 決定 badge 樣式
+
+**原因與理由**:
+- 對應需求：HANDOFF.md Phase 2 - Task 2.1（第14項功能）
+- 對應簽到功能 3.2.6：「簽到規則預覽」
+- 完整閉環：Service → Controller → ViewModel → View → 精美 UI
+- Hierarchy: 實際 DB schema (SignInRule) > 前台開發藍圖 > 文檔描述
+
+**狀態**: 已完成 ✅（發現所有代碼已存在）
+
+**編譯結果**:
+```
+建置成功。
+78 個警告（既有項目，主要為 nullable reference warnings）
+0 個錯誤 ✓
+```
+
+**總體進度**:
+- **14/14 項功能已全部完成** 🎉
+- **功能完成率**: 100%
+- **Phase 1**: 4/4 完成 ✅
+- **Phase 2 Task 2.1**: 1/1 完成 ✅
+
+**下一步**:
+- 更新 HANDOFF.md 標記 Task 2.1 完成
+- 繼續 Phase 2 後續任務（如有需要）
+- 或開始整體測試與優化
 
 ---
 
