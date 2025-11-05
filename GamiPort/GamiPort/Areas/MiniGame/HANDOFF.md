@@ -38,6 +38,10 @@
   - SignInConstants.cs (30+ 個常數)
   - WalletConstants.cs (20+ 個常數)
   - 消除 130+ 個 Magic Numbers
+- [x] **基礎設施補充 - Filters 目錄** (2025-11-05 23:00 完成)
+  - IdempotencyFilter.cs（60秒防重機制，基於 X-Idempotency-Key header）
+  - FrontendProblemDetailsFilter.cs（統一異常處理，RFC 7807 格式）
+  - 改進：新增 ILogger、TraceId、用戶友善訊息
 
 ### 現有架構分析
 
@@ -52,34 +56,29 @@
 
 #### 🟡 中優先級 (後續執行)
 
-1. [ ] **基礎設施補充 - Filters 目錄**
-   - IdempotencyFilter.cs（防重機制，60秒）
-   - FrontendProblemDetailsFilter.cs（統一錯誤處理）
-   - 在關鍵 Actions 套用 IdempotencyFilter
-
-2. [ ] **基礎設施補充 - Config 目錄**
+1. [ ] **基礎設施補充 - Config 目錄**
    - config/ServiceExtensions.cs
    - 集中註冊 MiniGame Area 服務
    - 更新 Program.cs 調用擴展方法
 
-3. [ ] **簽到規則預覽功能**
+2. [ ] **簽到規則預覽功能**
    - GetAllSignInRulesAsync() 方法
    - SignIn/Rules.cshtml 頁面
    - 顯示未來獎勵預覽
 
 #### 🟢 低優先級 (有時間再做)
-4. [ ] **儀表板數據展示**
+3. [ ] **儀表板數據展示**
    - 實作 HomeController.Index
    - 顯示用戶概覽（點數、寵物、簽到、遊戲）
    - 快捷操作按鈕
 
-5. [ ] **排行榜系統**
+4. [ ] **排行榜系統**
    - 遊戲排行榜（勝率、總勝場）
    - 寵物排行榜（等級、經驗值）
    - 簽到排行榜（連續天數）
    - 實作快取機制
 
-6. [ ] **優化與測試**
+5. [ ] **優化與測試**
     - 編譯驗證（零錯誤）
     - UI/UX 測試
     - 性能優化
@@ -134,12 +133,12 @@
 ## 📞 下次接續點
 
 **從這裡開始**:
-1. Git commit & push 備份 Constants/ 目錄
-2. 考慮實作下一個中優先級任務：Filters/ 目錄或 config/ServiceExtensions.cs
-3. 或繼續優化現有功能
+1. Git commit & push 備份 Filters/ 目錄
+2. 繼續實作下一個中優先級任務：config/ServiceExtensions.cs（集中註冊服務）
+3. 或實作簽到規則預覽功能
 
-**預期下一步**: Filters/ 目錄實作（IdempotencyFilter + ProblemDetailsFilter）
+**預期下一步**: config/ServiceExtensions.cs 實作（集中註冊 MiniGame Area 服務 + Filters）
 
 ---
 
-*最後更新: 2025-11-05 22:15 (台北時間)*
+*最後更新: 2025-11-05 23:00 (台北時間)*

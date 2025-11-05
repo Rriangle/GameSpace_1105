@@ -303,6 +303,90 @@
 
 ---
 
+### 23:00 - 實作 Filters 目錄基礎設施 ✅
+
+**動作**:
+1. ✅ 閱讀 MUST-FOLLOW-RULES.txt 複習規範
+2. ✅ 並行啟動 3 個代理分析 GameSpace Filters 實作
+3. ✅ 創建 Filters/ 目錄結構
+4. ✅ 實作 IdempotencyFilter.cs - 60秒防重機制
+5. ✅ 實作 FrontendProblemDetailsFilter.cs - 統一異常處理
+6. ✅ 驗證編譯成功 - `dotnet build` **0 個錯誤，0 個警告** ✓
+
+**變更檔案**:
+- `Filters/IdempotencyFilter.cs` (新建 114 行)
+  - 基於 X-Idempotency-Key header 的冪等性檢查
+  - 僅對 POST/PUT/PATCH/DELETE 方法生效
+  - 使用 IMemoryCache 快取 60 秒
+  - 完整日誌記錄（LogWarning/LogInformation）
+  - 返回符合 RFC 7807 的 ProblemDetails 格式
+  - 錯誤處理：400 Bad Request（缺少 Key）、409 Conflict（重複請求）
+
+- `Filters/FrontendProblemDetailsFilter.cs` (新建 123 行)
+  - 實作 IExceptionFilter 介面
+  - 統一捕獲未處理的異常
+  - 異常類型分類：ArgumentException(400)、UnauthorizedAccessException(401)、KeyNotFoundException(404)、InvalidOperationException(409)、NotImplementedException(501)
+  - 完整日誌記錄（LogError 包含 TraceId）
+  - 用戶友善的錯誤訊息（不洩漏技術細節）
+  - 返回標準 ProblemDetails 格式（type/title/status/detail/instance/traceId）
+
+**原因與理由**:
+- 對應需求：HANDOFF.md 中優先級任務「基礎設施補充 - Filters 目錄」
+- 參考實作：GameSpace MiniGame Area 的 IdempotencyFilter 和 MiniGameProblemDetailsFilter
+- 關鍵改進：
+  - FrontendProblemDetailsFilter 新增 ILogger 依賴注入（GameSpace 版本無日誌）
+  - 所有錯誤響應都包含 traceId 用於追蹤
+  - 用戶友善的錯誤訊息（針對前台用戶優化）
+- 設計模式：
+  - IdempotencyFilter 繼承 ActionFilterAttribute（支援建構子注入）
+  - FrontendProblemDetailsFilter 實作 IExceptionFilter（標準異常處理）
+- 命名空間：GamiPort.Areas.MiniGame.Filters（與 GameSpace 平行）
+
+**技術細節**:
+- **多代理分析策略**：並行啟動 3 個代理分析不同面向
+  - Agent 1: GameSpace IdempotencyFilter 完整分析
+  - Agent 2: GameSpace ProblemDetailsFilter 完整分析
+  - Agent 3: GameSpace Filters 註冊方式分析
+- **IdempotencyFilter 關鍵特性**：
+  - 快取鍵格式：`idempotency:{客戶端提供的Key}`
+  - 過期時間：60 秒絕對過期（AbsoluteExpirationRelativeToNow）
+  - 快取優先級：CacheItemPriority.Low（記憶體不足時優先清除）
+  - 僅快取成功請求（OkObjectResult/CreatedResult/NoContentResult/RedirectToActionResult）
+- **FrontendProblemDetailsFilter 關鍵特性**：
+  - 異常記錄：LogError 包含 TraceId、Path、StatusCode
+  - 異常分類：6 種常見異常類型 + 預設 500
+  - RFC 7807 規範：完整的 type URI、title、status、detail、instance、traceId
+  - 用戶友善訊息：避免洩漏技術細節（不直接返回 exception.Message）
+- **依賴服務**：
+  - IMemoryCache（已在 Program.cs 註冊）
+  - ILogger<T>（ASP.NET Core 內建）
+
+**關鍵發現（來自代理分析）**:
+- GameSpace 的 Filters **已開發但未啟用**（未在 Program.cs 或 ServiceExtensions.cs 註冊）
+- GameSpace 目前使用內建 `[Authorize]` + Policy-based 授權，未使用自定義 Filters
+- GameSpace 的 MiniGameProblemDetailsFilter **缺少日誌記錄和 TraceId**
+- GamiPort 實作時已修正這些缺失
+
+**註冊方式（待實作）**:
+- **IdempotencyFilter** 需要在 config/ServiceExtensions.cs 中註冊為 Scoped Service
+- **FrontendProblemDetailsFilter** 可選：全域註冊（Program.cs）或 BaseController 層級
+- 目前僅創建 Filter 類別，註冊和使用留待下一階段（config/ServiceExtensions.cs 實作）
+
+**狀態**: 已完成 ✅
+
+**編譯結果**:
+```
+建置成功。
+0 個警告
+0 個錯誤 ✓
+```
+
+**下一步**:
+- Git commit 並 push 備份
+- 繼續實作次要優先級項目：config/ServiceExtensions.cs（集中註冊 MiniGame Area 服務）
+
+---
+
 ## 執行記錄模板
 
 ### YYYY-MM-DD HH:MM - [標題]
