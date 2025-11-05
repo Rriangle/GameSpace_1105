@@ -221,6 +221,88 @@
 
 ---
 
+### 22:15 - 實作 Constants 目錄基礎設施 ✅
+
+**動作**:
+1. ✅ 閱讀 MUST-FOLLOW-RULES.txt 複習規範
+2. ✅ 閱讀 HANDOFF.md 確認下一個高優先級任務
+3. ✅ 並行啟動 5 個代理收集 Magic Numbers 信息
+4. ✅ 創建 Constants/ 目錄結構
+5. ✅ 實作 GameConstants.cs - 33 個常數
+6. ✅ 實作 PetConstants.cs - 40+ 個常數（包含三級經驗值公式）
+7. ✅ 實作 SignInConstants.cs - 30+ 個常數
+8. ✅ 實作 WalletConstants.cs - 20+ 個常數
+9. ✅ 驗證編譯成功 - `dotnet build` 0 個錯誤 ✓
+
+**變更檔案**:
+- `Constants/GameConstants.cs` (新建 195 行)
+  - 遊戲限制：DEFAULT_DAILY_GAME_LIMIT, MIN/MAX_DIFFICULTY_LEVEL
+  - 怪物數量配置：MONSTER_COUNT_LEVEL_1/2/3 (3/5/7)
+  - 速度倍數配置：SPEED_MULTIPLIER_LEVEL_1/2/3 (1.0/1.2/1.5)
+  - 寵物屬性變化：PET_*_DELTA_WIN/LOSE (hunger/mood/stamina/cleanliness)
+  - 遊戲狀態字串：GAME_RESULT_IN_PROGRESS/WIN/LOSE/ABORT
+  - 時間計算：DAYS_TO_ADD_FOR_DAY_END, TICKS_TO_SUBTRACT_FOR_DAY_END
+
+- `Constants/PetConstants.cs` (新建 208 行)
+  - 互動點數成本：INTERACT_POINT_COST = 5
+  - 屬性增量：STAT_INCREMENT_FEED/BATH/PLAY/SLEEP = 10
+  - 屬性範圍：STAT_MIN_VALUE = 0, STAT_MAX_VALUE = 100, STAT_LOW_THRESHOLD = 20
+  - 三級經驗值公式常數：
+    - Tier 1 (Level 1-10): EXP_FORMULA_TIER1_A = 40, _B = 60
+    - Tier 2 (Level 11-100): EXP_FORMULA_TIER2_A = 0.8, _B = 380
+    - Tier 3 (Level 101+): EXP_FORMULA_TIER3_BASE = 285.69, _RATE = 1.06
+  - 等級範圍：PET_INITIAL_LEVEL = 1, PET_MAX_LEVEL = 250
+  - 升級獎勵：LEVEL_REWARD_TIER_MULTIPLIER = 10, LEVEL_REWARD_MAX = 250
+  - 每日衰減：DAILY_HUNGER_DECAY = -20, DAILY_MOOD_DECAY = -30, etc.
+
+- `Constants/SignInConstants.cs` (新建 165 行)
+  - 日期計算：TICKS_TO_END_OF_DAY = -1, DAYS_TO_ADD_FOR_TOMORROW = 1
+  - 預設值：DEFAULT_POINTS_IF_NO_RULE = 0, EMPTY_COUPON_CODE = ""
+  - 日期驗證：MIN_MONTH = 1, MAX_MONTH = 12, MIN_YEAR = 1900
+  - 分頁計算：MIN_PAGE_NUMBER = 1, PAGE_INDEX_OFFSET = 1
+  - 訊息字串：ERROR_ALREADY_SIGNED_IN, ERROR_NO_RULE_FOR_DAY, SUCCESS_CHECK_IN
+
+- `Constants/WalletConstants.cs` (新建 130 行)
+  - 分頁設置：DEFAULT_PAGE_SIZE = 10, MIN_PAGE_SIZE = 10, MAX_PAGE_SIZE = 200
+  - 統計摘要鍵名：KEY_CURRENT_POINTS, KEY_TOTAL_EARNED, KEY_TOTAL_SPENT, KEY_TRANSACTION_COUNT
+  - 交易類型：CHANGE_TYPE_POINT/COUPON/EVOUCHER, CHANGE_TYPE_GAME_REWARD/SIGNIN_REWARD/PET_LEVELUP
+  - 狀態值：EVOUCHER_STATUS_REDEEMED/REVOKED
+  - 日期計算：DAYS_TO_ADD_FOR_END_DATE = 1, TICKS_TO_SUBTRACT_FOR_INCLUSIVE_END = -1
+
+**原因與理由**:
+- 對應需求：HANDOFF.md 基礎設施補充項目「Constants 目錄」（中優先級）
+- 消除 Magic Numbers：識別並整理 130+ 個分散在各 Service 中的硬編碼數值
+- 設計模式：參考 GameSpace 實作（5個代理並行分析）
+- 命名規範：PascalCase, const keyword, 完整 XML 文檔註解
+- 功能分組：使用註解分隔符 (========) 清楚區分常數用途
+
+**技術細節**:
+- **多代理分析策略**：並行啟動 5 個代理分析不同 Service
+  - Agent 1: PetService Magic Numbers (40+ 個常數)
+  - Agent 2: WalletService Magic Numbers (15 個常數)
+  - Agent 3: SignInService Magic Numbers (30+ 個常數)
+  - Agent 4: GamePlayService Magic Numbers (33 個常數)
+  - Agent 5: GameSpace Constants 參考結構
+- **靜態類別模式**: 所有 Constants 使用 `public static class` 定義
+- **編譯時優化**: 使用 `const` 關鍵字確保編譯時常數內嵌
+- **完整文檔**: 每個常數都有 `<summary>` XML 註解說明用途
+- **命名空間**: `GamiPort.Areas.MiniGame.Constants` 與 GameSpace 平行
+
+**狀態**: 已完成 ✅
+
+**編譯結果**:
+```
+建置成功。
+69 個警告（既有項目）
+0 個錯誤 ✓
+```
+
+**下一步**:
+- Git commit 並 push 備份
+- 考慮實作次要優先級項目（Filters/、config/ServiceExtensions.cs、排行榜系統等）
+
+---
+
 ## 執行記錄模板
 
 ### YYYY-MM-DD HH:MM - [標題]

@@ -23,6 +23,21 @@
   - Services: 9 個檔案
   - Views: 12 個
   - Helpers: TimeHelper.cs (UTC+8 時間處理)
+- [x] **寵物升級系統** (2025-11-05 20:30 完成)
+  - AddExperienceAsync, LevelUpPetAsync 完整實作
+  - 三級經驗值公式（Level 1-10, 11-100, 101+）
+  - 階層式獎勵發放（10-250點）
+  - GamePlayService 和 SignInService 整合
+- [x] **優惠券/電子禮券使用功能** (2025-11-05 21:45 完成)
+  - UseCouponAsync（5層驗證）
+  - RedeemEVoucherAsync（4層驗證 + EvoucherRedeemLog）
+  - GetWalletHistoryAsync（增強版：分頁、篩選、5級模糊搜尋）
+- [x] **基礎設施補充 - Constants 目錄** (2025-11-05 22:15 完成)
+  - GameConstants.cs (33 個常數)
+  - PetConstants.cs (40+ 個常數)
+  - SignInConstants.cs (30+ 個常數)
+  - WalletConstants.cs (20+ 個常數)
+  - 消除 130+ 個 Magic Numbers
 
 ### 現有架構分析
 
@@ -35,62 +50,36 @@
 
 ### 待辦事項 (依優先級)
 
-#### 🔴 高優先級 (立即執行)
-1. [ ] **實作寵物升級系統** (最關鍵！)
-   - 建立 IPetLevelingService 介面與實作
-   - CheckAndLevelUpAsync() - 檢查並升級
-   - 升級閾值計算（Level 1-10, 11-100, 101+）
-   - 升級獎勵發放（點數、優惠券）
-   - 整合至 GamePlayService 和 SignInService
-   - 測試升級流程
-
-2. [ ] **優惠券/電子禮券使用功能**
-   - IWalletService 新增 UseCouponAsync()
-   - IWalletService 新增 RedeemEVoucherAsync()
-   - WalletController 新增對應 Actions
-   - 建立使用/兌換頁面
-
-3. [ ] **錢包交易歷史頁面**
-   - WalletController.History Action
-   - Wallet/History.cshtml
-   - 分頁與篩選（日期、類型）
-
 #### 🟡 中優先級 (後續執行)
-4. [ ] **基礎設施補充 - Constants 目錄**
-   - WalletConstants.cs（變更類型、項目代碼）
-   - PetConstants.cs（屬性範圍、成本定義）
-   - SignInConstants.cs（獎勵配置、閾值）
-   - GameConstants.cs（遊戲常數）
-   - 移除現有 Magic Numbers
 
-5. [ ] **基礎設施補充 - Filters 目錄**
+1. [ ] **基礎設施補充 - Filters 目錄**
    - IdempotencyFilter.cs（防重機制，60秒）
    - FrontendProblemDetailsFilter.cs（統一錯誤處理）
    - 在關鍵 Actions 套用 IdempotencyFilter
 
-6. [ ] **基礎設施補充 - Config 目錄**
+2. [ ] **基礎設施補充 - Config 目錄**
    - config/ServiceExtensions.cs
    - 集中註冊 MiniGame Area 服務
    - 更新 Program.cs 調用擴展方法
 
-7. [ ] **簽到規則預覽功能**
+3. [ ] **簽到規則預覽功能**
    - GetAllSignInRulesAsync() 方法
    - SignIn/Rules.cshtml 頁面
    - 顯示未來獎勵預覽
 
 #### 🟢 低優先級 (有時間再做)
-8. [ ] **儀表板數據展示**
+4. [ ] **儀表板數據展示**
    - 實作 HomeController.Index
    - 顯示用戶概覽（點數、寵物、簽到、遊戲）
    - 快捷操作按鈕
 
-9. [ ] **排行榜系統**
+5. [ ] **排行榜系統**
    - 遊戲排行榜（勝率、總勝場）
    - 寵物排行榜（等級、經驗值）
    - 簽到排行榜（連續天數）
    - 實作快取機制
 
-10. [ ] **優化與測試**
+6. [ ] **優化與測試**
     - 編譯驗證（零錯誤）
     - UI/UX 測試
     - 性能優化
@@ -145,13 +134,12 @@
 ## 📞 下次接續點
 
 **從這裡開始**:
-1. 啟動 4-6 個代理並行閱讀所有必要文檔
-2. 連接 SQL Server 驗證資料庫
-3. 檢查 MiniGame Area 現有結構
-4. 開始 Views 開發
+1. Git commit & push 備份 Constants/ 目錄
+2. 考慮實作下一個中優先級任務：Filters/ 目錄或 config/ServiceExtensions.cs
+3. 或繼續優化現有功能
 
-**預期時間**: 2-3 小時完成文檔閱讀與環境準備
+**預期下一步**: Filters/ 目錄實作（IdempotencyFilter + ProblemDetailsFilter）
 
 ---
 
-*最後更新: 2025-11-05 19:30 (台北時間)*
+*最後更新: 2025-11-05 22:15 (台北時間)*
