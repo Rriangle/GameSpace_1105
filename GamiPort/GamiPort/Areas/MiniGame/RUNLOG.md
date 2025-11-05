@@ -387,6 +387,80 @@
 
 ---
 
+### 23:30 - 實作 config/ServiceExtensions.cs（集中註冊 MiniGame Area 服務）
+
+**動作**:
+1. ✅ 並行啟動 3 個代理分析
+   - Agent 1: GameSpace ServiceExtensions.cs 完整實作分析
+   - Agent 2: GamiPort Program.cs 現有服務註冊分析
+   - Agent 3: GamiPort Services 目錄服務清單分析
+2. ✅ 創建 config/ 目錄
+3. ✅ 創建 config/ServiceExtensions.cs (62 行)
+4. ✅ 修改 Program.cs（新增 using + 呼叫 AddMiniGameServices）
+5. ✅ 驗證編譯（0 errors, 72 warnings）
+
+**變更檔案**:
+- `Areas/MiniGame/config/ServiceExtensions.cs` (新建 62 行)
+  - 命名空間：GamiPort.Areas.MiniGame.config
+  - 擴展方法：AddMiniGameServices(IServiceCollection, IConfiguration)
+  - 註冊 2 個 Filters：IdempotencyFilter, FrontendProblemDetailsFilter
+  - 註冊 5 個核心服務：FuzzySearchService, PetService, SignInService, WalletService, GamePlayService
+  - 所有服務使用 Scoped 生命週期（匹配 DbContext 生命週期）
+  - 註冊順序優化：基於依賴圖層級排序（Level 1: FuzzySearch → Level 2: Pet → Level 3: SignIn/Game/Wallet）
+
+- `Program.cs` (修改 2 處)
+  - Line 28: 新增 `using GamiPort.Areas.MiniGame.config;`
+  - Lines 176-183: 替換 5 行個別服務註冊為單行 `builder.Services.AddMiniGameServices(builder.Configuration);`
+  - 更新註解：「集中註冊：簽到、寵物、遊戲、錢包、Filters」
+
+**原因與理由**:
+- 對應需求：HANDOFF.md 中優先級任務「config/ServiceExtensions.cs - 集中註冊 MiniGame Area 服務 + Filters」
+- 參考架構：GameSpace MiniGame Area 的 ServiceExtensions.cs 模式（50+ 服務集中註冊）
+- 設計優勢：
+  - 模組化：MiniGame Area 服務註冊邏輯與 Program.cs 解耦
+  - 可維護性：新增服務僅需修改 ServiceExtensions.cs
+  - 一致性：與 GameSpace 後台架構保持一致
+  - 可讀性：Program.cs 更簡潔，服務註冊職責明確
+
+**技術細節**:
+- **多代理分析結果**：
+  - GameSpace 註冊 50+ 服務，98% 使用 Scoped 生命週期
+  - 唯一 Singleton：ITaiwanHolidayService（無狀態）
+  - 唯一 HostedService：PetDailyDecayBackgroundService（背景服務）
+  - GamiPort 原先在 Program.cs 直接註冊 5 個服務（Lines 177-181）
+- **依賴圖分析**：
+  - Level 1（無依賴）：IFuzzySearchService
+  - Level 2（依賴 Level 1）：IPetService
+  - Level 3（依賴 Level 2）：ISignInService, IGamePlayService（兩者都依賴 IPetService）
+  - Level 3（獨立）：IWalletService
+- **Filter 註冊**：
+  - IdempotencyFilter 和 FrontendProblemDetailsFilter 註冊為 Scoped
+  - 允許通過 [ServiceFilter(typeof(IdempotencyFilter))] 在 Controller Action 上使用
+- **Program.cs 修改挑戰**：
+  - Edit 操作遇到 tab/space 匹配問題（多次失敗）
+  - 最終使用逐行刪除 + 替換策略成功完成
+- **基礎設施準備**：
+  - IMemoryCache：已在 Program.cs 註冊（Line 105）
+  - IAppClock：已註冊為 Singleton（Lines 171-175）
+  - GameSpacedatabaseContext：已註冊為 Scoped（Lines 58-61）
+
+**狀態**: 已完成 ✅
+
+**編譯結果**:
+```
+Build succeeded.
+72 個警告
+0 個錯誤 ✓
+經過時間 00:00:04.77
+```
+
+**下一步**:
+- 更新 HANDOFF.md（標記 config/ServiceExtensions.cs 為完成）
+- Git commit 並 push 備份
+- 繼續實作下一個中優先級任務：簽到規則預覽功能（GetAllSignInRulesAsync + Rules.cshtml）
+
+---
+
 ## 執行記錄模板
 
 ### YYYY-MM-DD HH:MM - [標題]

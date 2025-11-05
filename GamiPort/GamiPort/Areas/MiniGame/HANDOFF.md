@@ -56,10 +56,11 @@
 
 #### 🟡 中優先級 (後續執行)
 
-1. [ ] **基礎設施補充 - Config 目錄**
-   - config/ServiceExtensions.cs
-   - 集中註冊 MiniGame Area 服務
-   - 更新 Program.cs 調用擴展方法
+1. [x] **基礎設施補充 - Config 目錄** (2025-11-05 23:30 完成)
+   - config/ServiceExtensions.cs (62 行)
+   - 集中註冊 MiniGame Area 服務（5 個核心服務 + 2 個 Filters）
+   - 更新 Program.cs 調用擴展方法（AddMiniGameServices）
+   - 編譯驗證：0 errors, 72 warnings ✓
 
 2. [ ] **簽到規則預覽功能**
    - GetAllSignInRulesAsync() 方法
@@ -133,12 +134,15 @@
 ## 📞 下次接續點
 
 **從這裡開始**:
-1. Git commit & push 備份 Filters/ 目錄
-2. 繼續實作下一個中優先級任務：config/ServiceExtensions.cs（集中註冊服務）
-3. 或實作簽到規則預覽功能
+1. Git commit & push 備份 config/ 目錄 + Program.cs 修改
+2. 繼續實作下一個中優先級任務：簽到規則預覽功能
+   - 實作 GetAllSignInRulesAsync() 方法
+   - 創建 SignIn/Rules.cshtml 頁面
+   - 顯示未來獎勵預覽（表格或卡片布局）
+3. 或實作低優先級任務：儀表板數據展示、排行榜系統
 
-**預期下一步**: config/ServiceExtensions.cs 實作（集中註冊 MiniGame Area 服務 + Filters）
+**預期下一步**: 簽到規則預覽功能（GetAllSignInRulesAsync + Rules.cshtml）
 
 ---
 
-*最後更新: 2025-11-05 23:00 (台北時間)*
+*最後更新: 2025-11-05 23:45 (台北時間)*

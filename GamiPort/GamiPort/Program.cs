@@ -25,6 +25,7 @@ using GamiPort.Areas.social_hub.Services.Application;
 using GamiPort.Areas.OnlineStore.Utils;   // AnonCookie
 
 // === 新增/確認的 using（本檔有用到的服務/端點） ===
+using GamiPort.Areas.MiniGame.config;      // ★ MiniGame Area 服務擴展方法
 using GamiPort.Infrastructure.Security;    // ★ 我方統一介面 IAppCurrentUser / AppCurrentUser
 using GamiPort.Infrastructure.Time;
 using GamiPort.Models;                     // GameSpacedatabaseContext（業務資料）
@@ -173,12 +174,8 @@ namespace GamiPort
 				return new AppClock(taiwanTz);
 			});
 			// ------------------------------------------------------------
-			// MiniGame Area 服務（簽到、寵物、遊戲、錢包等）
-			builder.Services.AddScoped<GamiPort.Areas.MiniGame.Services.ISignInService, GamiPort.Areas.MiniGame.Services.SignInService>();
-			builder.Services.AddScoped<GamiPort.Areas.MiniGame.Services.IPetService, GamiPort.Areas.MiniGame.Services.PetService>();
-			builder.Services.AddScoped<GamiPort.Areas.MiniGame.Services.IWalletService, GamiPort.Areas.MiniGame.Services.WalletService>();
-			builder.Services.AddScoped<GamiPort.Areas.MiniGame.Services.IFuzzySearchService, GamiPort.Areas.MiniGame.Services.FuzzySearchService>();
-			builder.Services.AddScoped<GamiPort.Areas.MiniGame.Services.IGamePlayService, GamiPort.Areas.MiniGame.Services.GamePlayService>();
+			// MiniGame Area 服務（集中註冊：簽到、寵物、遊戲、錢包、Filters）
+			builder.Services.AddMiniGameServices(builder.Configuration);
 			// ------------------------------------------------------------
 			// SignalR（聊天室必備）— 開啟詳細錯誤與穩定心跳
 			// ------------------------------------------------------------
