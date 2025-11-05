@@ -139,6 +139,23 @@ namespace GamiPort.Areas.MiniGame.Controllers
 
 			return View(viewModel);
 		}
+
+		/// <summary>
+		/// 簽到規則 - 顯示所有活動簽到規則的獎勵表
+		/// </summary>
+		public async Task<IActionResult> Rules()
+		{
+			// 取得所有活動簽到規則（不需要登入）
+			var rules = await _signInService.GetAllActiveRulesAsync();
+
+			// 準備 ViewModel
+			var viewModel = new SignInRulesViewModel
+			{
+				Rules = rules
+			};
+
+			return View(viewModel);
+		}
 	}
 
 	/// <summary>
@@ -172,5 +189,14 @@ namespace GamiPort.Areas.MiniGame.Controllers
 
 		/// <summary>篩選月份（可選）</summary>
 		public int? FilterMonth { get; set; }
+	}
+
+	/// <summary>
+	/// 簽到規則 ViewModel
+	/// </summary>
+	public class SignInRulesViewModel
+	{
+		/// <summary>所有活動簽到規則列表</summary>
+		public List<SignInRuleDto> Rules { get; set; } = new();
 	}
 }

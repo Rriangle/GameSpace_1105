@@ -380,5 +380,33 @@ namespace GamiPort.Areas.MiniGame.Services
 
 			return (currentConsecutive, maxConsecutive);
 		}
+
+	/// <summary>
+	/// 取得所有活動的簽到規則（供使用者查看獎勵表）
+	/// </summary>
+	/// <returns>所有活動簽到規則列表（按日序號排序）</returns>
+	public async Task<List<SignInRuleDto>> GetAllActiveRulesAsync()
+	{
+		// 查詢所有活動且未刪除的簽到規則
+		var rules = await _context.SignInRules
+			.AsNoTracking()
+			.Where(r => r.IsActive && !r.IsDeleted)
+			.OrderBy(r => r.SignInDay)
+			.ToListAsync();
+
+		// 轉換為 DTO
+		var dtos = rules.Select(r => new SignInRuleDto
+		{
+			Id = r.Id,
+			SignInDay = r.SignInDay,
+			Points = r.Points,
+			Experience = r.Experience,
+			HasCoupon = r.HasCoupon,
+			CouponTypeCode = r.CouponTypeCode,
+			Description = r.Description
+		}).ToList();
+
+		return dtos;
+	}
 	}
 }
