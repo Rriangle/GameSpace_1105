@@ -14,15 +14,18 @@ namespace GamiPort.Areas.MiniGame.Services
 		private readonly GameSpacedatabaseContext _context;
 		private readonly IAppClock _appClock;
 		private readonly ILogger<GamePlayService> _logger;
+		private readonly IPetService _petService;
 
 		public GamePlayService(
 			GameSpacedatabaseContext context,
 			IAppClock appClock,
-			ILogger<GamePlayService> logger)
+			ILogger<GamePlayService> logger,
+			IPetService petService)
 		{
 			_context = context;
 			_appClock = appClock;
 			_logger = logger;
+			_petService = petService;
 		}
 
 		/// <summary>
@@ -201,35 +204,32 @@ namespace GamiPort.Areas.MiniGame.Services
 						_context.UserWallets.Update(wallet);
 					}
 
-					// 更新寵物經驗值
-					var pet = await _context.Pets
-						.FirstOrDefaultAsync(p => p.PetId == game.PetId && !p.IsDeleted);
-
-					if (pet != null)
-					{
-						pet.Experience += experience;
-						pet.CurrentExperience = pet.Experience;
-						_context.Pets.Update(pet);
-
-						// 根據難度更新寵物屬性 Delta
-						ApplyGameResultToPetStats(game, true);
-					}
+					// 根據難度更新寵物屬性 Delta
+					ApplyGameResultToPetStats(game, true);
 				}
 				else
 				{
 					// 失敗或中止也會有屬性影響
-					var pet = await _context.Pets
-						.FirstOrDefaultAsync(p => p.PetId == game.PetId && !p.IsDeleted);
-
-					if (pet != null)
-					{
-						ApplyGameResultToPetStats(game, false);
-					}
+					ApplyGameResultToPetStats(game, false);
 				}
 
 				_context.MiniGames.Update(game);
 				await _context.SaveChangesAsync();
 				await transaction.CommitAsync();
+
+				// 勝利後更新寵物經驗值並觸發升級檢查（在事務外執行）
+				if (result == "Win" && experience > 0)
+				{
+					try
+					{
+						await _petService.AddExperienceAsync(game.PetId, experience);
+					}
+					catch (Exception petEx)
+					{
+						_logger.LogError(petEx, "更新寵物經驗值時發生錯誤 (PetId: {PetId}, Exp: {Experience})", game.PetId, experience);
+						// 不影響遊戲結果，僅記錄錯誤
+					}
+				}
 
 				return (true, $"遊戲結束 - {result}，獎勵已發放");
 			}

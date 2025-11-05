@@ -1,0 +1,92 @@
+以下指令您若已閱讀過或做過就請忽略，反之則請執行 謝謝您！
+<指令>
+【角色 / Role】
+你是 Claude Code（支援多代理協作可分工），負責在 **ASP.NET MVC（GamiPort 專案）** 中開發 MiniGame Area 的前台介面與互動功能，並確保與實際 SQL Server 資料庫完全一致。你必須高互動、美觀、零編譯錯誤，且嚴格遵守以下規範。
+
+【嚴格越界規範（必讀）】
+1) **嚴格只允許**在
+   C:\Users\n2029\Desktop\work-1105\GamiPort\GamiPort\Areas\MiniGame
+   內「新增 / 修改」檔案。
+2) 如你判定「必須越界」才能達成需求，**務必先啟動「PAUSE-AND-ASK 模式」**：停止動作，回報：
+   - 目前情況與無法在本區完成的原因。
+   - 你的解法方案清單（含各方案利弊）。
+   - **準備跨區修改之檔案清單與精確路徑**。
+   - **以 unified diff 顯示**每個檔案「原始碼」→「擬寫入碼」的差異（`diff` 區塊）。
+   未獲同意之前，不得越界修改。
+
+【閱讀資料（必讀且依層級，分段讀到檔尾才算完成）】
+請依下列層級（有衝突時以上層優先）逐份完整閱讀與摘要，必要時分段讀取到**檔尾**並做筆記：
+1) 實際 SQL Server DB（**請實際連線**並檢視 schema 與種子資料）
+2) 後台既有架構 + 前台現況
+3) C:\Users\n2029\Desktop\work-1105\schema\README_合併版.md 的「**第3節：前台所需功能**」
+4) C:\Users\n2029\Desktop\work-1105\schema\前台開發藍圖文件.md
+5) ~/schema 資料夾底下所有檔案（包含但不限於）：
+   - C:\Users\n2029\Desktop\work-1105\schema\MiniGame Area 架構對比分析報告.md
+   - C:\Users\n2029\Desktop\work-1105\前台風格_brainstorming（整體「巴哈姆特風格」）
+   - C:\Users\n2029\Desktop\work-1105\MiniGame_Area想要採用的風格(淡藍現代系配色)（MiniGame Area 目標色系）
+   - C:\Users\n2029\Desktop\work-1105\schema\專案規格敘述1.txt
+   - C:\Users\n2029\Desktop\work-1105\schema\專案規格敘述2.txt
+   - C:\Users\n2029\Desktop\work-1105\schema\MiniGame_Area_完整描述文件.md
+   - C:\Users\n2029\Desktop\work-1105\schema\MiniGame_area功能彙整.txt
+   - C:\Users\n2029\Desktop\work-1105\schema\MiniGameArea_DB架構與種子資料報告.md
+   - C:\Users\n2029\Desktop\work-1105\schema\巴哈姆特風格布局特色完整分析.md
+   - 以及資源：C:\Users\n2029\Desktop\work-1105\GamiPort\GamiPort\Areas\MiniGame\wwwroot\PetBackgroundCostSettings表格_種子資料_圖片
+說明：若文字過長，請「分段讀取 + 摘要」，直到讀到檔尾，**未讀到檔尾視同失敗**需重讀。建立「已讀筆記」以利後續復原與審計。
+
+【資料庫一致性（強制）】
+- 你必須**實際連線 SQL Server**，以實表與種子資料為準，所有 View / Model / 互動邏輯皆需 100% 對齊 DB 欄位、型別、約束、外鍵、唯一鍵、CHECK、身分欄位（identity）等。
+- 優先參考 MiniGame Area（GameSpace）現有程式碼的邏輯；任何假設若與 DB 不符，應以 DB 為準。
+
+【開發工作目標與順序（限本區路徑內）】
+A. **從 Views 開始**（GamiPort / Areas / MiniGame）：
+   - 依「巴哈姆特風格」整體感 + MiniGame Area「淡藍現代系配色」完成整體視覺。
+   - 主要寵物互動頁面：畫面中有一隻可互動的寵物、右下角**「出發冒險」按鈕**。
+   - 點擊「出發冒險」進入小遊戲頁面；UI/UX 必須流暢（載入提示、失敗/成功提示、返回主頁）。
+   - 靜態資源、圖片、Unity WebGL 輸出（若採用）等皆置於本區 **wwwroot** 子資料夾內。
+
+B. **再開發 Models（本區）**：
+   - 參考 MiniGame Area（GameSpace）的既有邏輯（命名、DTO/ViewModel 分層、驗證）。
+   - 嚴格比對 DB 欄位（型別、長度、非空、CHECK 等）。必要時在 Model 註記資料註解、驗證屬性。
+
+C. **小遊戲（大量參考 Chrome 無網路恐龍跑步遊戲）**：
+   - 可使用 Unity + C# 製作並 **以 WebGL Build** 嵌入 View（輸出放置於本區 wwwroot/Unity/PetAdventure/**）。
+   - 遊戲規則、分數、次數、冷卻等與 DB 對接（讀寫次數、分數、獎勵、消耗），API/Controller 僅在本區建立（若需跨區路由/共用版型，即觸發 PAUSE-AND-ASK）。
+
+【程式碼與資產產出（每一步都要可審計）】
+- 請於每一小步驟完成後輸出：
+  1) **變更檔案清單**（僅限本區），
+  2) 每檔案的 **diff 區塊**（```diff ... ```），
+  3) 目的與理由（對應需求與 DB）。
+
+【進度紀錄與可恢復機制（必做）】
+1) 在本路徑內維護：
+   - RUNLOG.md：時間序紀錄（台北時間），紀錄「做到哪、為何這樣做、下一步」。
+   - HANDOFF.md：給下一輪/中斷後的「**接續點**」與「**TO-DO 清單**」。
+   - CHECKLIST.md：對齊 DB/需求的核對清單（打勾式）。
+2) 每次開始工作前：
+   - 先快速讀取 RUNLOG.md/HANDOFF.md，**從中斷點繼續**，更新「已完成 / 待辦」。
+3) 任務尾聲或中斷前：
+   - 更新 RUNLOG.md/HANDOFF.md/CHECKLIST.md，確保下次可「零猜測」續作。
+
+【Git 安全備份策略（週期性執行）】
+- 執行git add . commit push
+- 建議每完成一小步就備份，訊息包含時間戳與里程碑
+-不可創新分支，一律使用dev分支
+
+【UI/UX 與風格要求】
+- 以「巴哈姆特風格」為整體布局參考，MiniGame 區域採「淡藍現代系配色」。
+- 保持元件一致性、回饋明確（hover/active/負載/錯誤）、鍵盤可達性與可讀性（中文保真、RWD）。
+
+【品質門檻】
+- 專案**無編譯錯誤**，嚴格型別安全，與 DB 完整對齊（欄位、型別、FK/PK/UK/CHECK/Identity）。
+- 嚴禁省略步驟、嚴禁以「略 / TODO」敷衍。
+
+【開始執行時請先回報】
+1) 你將依照的「閱讀與實作計畫（分段）」與預期里程碑。
+2) 你將建立的 RUNLOG.md/HANDOFF.md/CHECKLIST.md 位置與初始內容。
+
+【提醒】
+- 務必大量使用multi-agents來執行作業以增加效率。
+- 使用ultrathink
+- 不用理會時間/金錢/token/版面 成本，務必全力執行及實作。
+- 任何需要修改本區以外檔案的情況，一律先進入 **PAUSE-AND-ASK 模式** 並提供 **diff** 審查。

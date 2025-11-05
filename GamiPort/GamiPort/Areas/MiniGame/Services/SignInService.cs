@@ -16,11 +16,13 @@ namespace GamiPort.Areas.MiniGame.Services
 	{
 		private readonly GameSpacedatabaseContext _context;
 		private readonly IAppClock _appClock;
+		private readonly IPetService _petService;
 
-		public SignInService(GameSpacedatabaseContext context, IAppClock appClock)
+		public SignInService(GameSpacedatabaseContext context, IAppClock appClock, IPetService petService)
 		{
 			_context = context ?? throw new ArgumentNullException(nameof(context));
 			_appClock = appClock ?? throw new ArgumentNullException(nameof(appClock));
+			_petService = petService ?? throw new ArgumentNullException(nameof(petService));
 		}
 
 		/// <summary>
@@ -164,6 +166,26 @@ namespace GamiPort.Areas.MiniGame.Services
 				}
 
 				await transaction.CommitAsync();
+
+				// 更新寵物經驗值並觸發升級檢查（在事務外執行）
+				if (signInRule.Experience > 0)
+				{
+					try
+					{
+						var pet = await _context.Pets
+							.AsNoTracking()
+							.FirstOrDefaultAsync(p => p.UserId == userId && !p.IsDeleted);
+
+						if (pet != null)
+						{
+							await _petService.AddExperienceAsync(pet.PetId, signInRule.Experience);
+						}
+					}
+					catch (Exception)
+					{
+						// 不影響簽到結果，僅記錄失敗（可選擇性加入日誌）
+					}
+				}
 
 				return new SignInResultDto
 				{

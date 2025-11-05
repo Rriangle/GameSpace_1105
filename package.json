@@ -1,0 +1,20 @@
+{
+  "name": "work-1105",
+  "version": "1.0.0",
+  "description": "",
+  "main": "query_seed_data.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rriangle/GameSpace_1105.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Rriangle/GameSpace_1105/issues"
+  },
+  "homepage": "https://github.com/Rriangle/GameSpace_1105#readme"
+}

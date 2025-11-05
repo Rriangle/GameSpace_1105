@@ -300,5 +300,198 @@ namespace GamiPort.Areas.MiniGame.Services
 				.OrderBy(s => s.DisplayOrder ?? 0)
 				.ToListAsync();
 		}
+
+		/// <summary>
+		/// 增加寵物經驗值，並自動檢查升級
+		/// </summary>
+		public async Task<bool> AddExperienceAsync(int petId, int exp)
+		{
+			if (exp < 0)
+			{
+				return false;
+			}
+
+			var pet = await _context.Pets
+				.FirstOrDefaultAsync(p => p.PetId == petId && !p.IsDeleted);
+
+			if (pet == null)
+			{
+				return false;
+			}
+
+			// 增加經驗值
+			pet.Experience += exp;
+
+			// 自動檢查升級（支援跨多級升級）
+			var requiredExp = await GetRequiredExpForLevelAsync(pet.Level + 1);
+			while (pet.Experience >= requiredExp && requiredExp > 0)
+			{
+				// 執行升級
+				var levelUpSuccess = await LevelUpPetAsync(petId);
+				if (!levelUpSuccess)
+				{
+					break;
+				}
+
+				// 重新取得寵物資料
+				pet = await _context.Pets
+					.FirstOrDefaultAsync(p => p.PetId == petId && !p.IsDeleted);
+
+				if (pet == null)
+				{
+					break;
+				}
+
+				// 檢查下一級
+				requiredExp = await GetRequiredExpForLevelAsync(pet.Level + 1);
+			}
+
+			// 保存最終經驗值變更
+			_context.Pets.Update(pet);
+			await _context.SaveChangesAsync();
+
+			return true;
+		}
+
+		/// <summary>
+		/// 寵物升級並發放獎勵
+		/// </summary>
+		public async Task<bool> LevelUpPetAsync(int petId)
+		{
+			var pet = await _context.Pets
+				.FirstOrDefaultAsync(p => p.PetId == petId && !p.IsDeleted);
+
+			if (pet == null)
+			{
+				return false;
+			}
+
+			// 獲取當前等級所需經驗值
+			var requiredExp = await GetRequiredExpForLevelAsync(pet.Level + 1);
+			if (requiredExp == 0)
+			{
+				// 已達最高等級
+				return false;
+			}
+
+			if (pet.Experience < requiredExp)
+			{
+				// 經驗值不足
+				return false;
+			}
+
+			// 開啟事務
+			using var transaction = await _context.Database.BeginTransactionAsync();
+			try
+			{
+				var utcNow = _appClock.UtcNow;
+
+				// 升級
+				pet.Level++;
+				pet.LevelUpTime = utcNow;
+				pet.Experience -= requiredExp; // 保留溢出經驗值
+
+				// 計算獎勵
+				var pointsReward = CalculateLevelUpReward(pet.Level);
+
+				// 更新用戶錢包
+				var wallet = await _context.UserWallets
+					.FirstOrDefaultAsync(w => w.UserId == pet.UserId && !w.IsDeleted);
+
+				if (wallet != null)
+				{
+					wallet.UserPoint += pointsReward;
+
+					// 記錄到錢包歷史
+					_context.WalletHistories.Add(new WalletHistory
+					{
+						UserId = pet.UserId,
+						ChangeType = "Pet",
+						PointsChanged = pointsReward,
+						ItemCode = $"PET_LEVELUP_{pet.Level}",
+						Description = $"寵物升級至 Level {pet.Level}",
+						ChangeTime = utcNow
+					});
+				}
+
+				// 保存更改
+				_context.Pets.Update(pet);
+				if (wallet != null)
+				{
+					_context.UserWallets.Update(wallet);
+				}
+				await _context.SaveChangesAsync();
+				await transaction.CommitAsync();
+
+				return true;
+			}
+			catch
+			{
+				await transaction.RollbackAsync();
+				return false;
+			}
+		}
+
+		/// <summary>
+		/// 獲取指定等級所需的經驗值（三級公式）
+		/// </summary>
+		public Task<int> GetRequiredExpForLevelAsync(int level)
+		{
+			if (level < 1)
+			{
+				return Task.FromResult(0);
+			}
+
+			if (level > 250)
+			{
+				// 超過250級視為最高等級
+				return Task.FromResult(0);
+			}
+
+			// 三級經驗值公式
+			if (level <= 10)
+			{
+				// Level 1-10: 線性公式
+				// EXP = 40 * level + 60
+				return Task.FromResult(40 * level + 60);
+			}
+			else if (level <= 100)
+			{
+				// Level 11-100: 二次公式
+				// EXP = 0.8 * level^2 + 380
+				return Task.FromResult((int)(0.8 * level * level + 380));
+			}
+			else
+			{
+				// Level 101+: 指數公式
+				// EXP = 285.69 * (1.06 ^ level)
+				return Task.FromResult((int)(285.69 * Math.Pow(1.06, level)));
+			}
+		}
+
+		/// <summary>
+		/// 計算升級獎勵（階層式獎勵）
+		/// </summary>
+		private int CalculateLevelUpReward(int level)
+		{
+			if (level < 1)
+			{
+				return 0;
+			}
+
+			if (level > 250)
+			{
+				return 250; // 最高獎勵250點
+			}
+
+			// 階層式獎勵：每10級一個階層，每個階層獎勵 +10 點
+			// Level 1-10: +10 點
+			// Level 11-20: +20 點
+			// Level 21-30: +30 點
+			// ...
+			// Level 241-250: +250 點
+			int tier = Math.Min((level - 1) / 10 + 1, 25);
+			return tier * 10;
+		}
 	}
 }
