@@ -1,3 +1,4 @@
+using GamiPort.Infrastructure.Time;
 using GamiPort.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,15 +13,18 @@ namespace GamiPort.Areas.MiniGame.Services
 		private readonly GameSpacedatabaseContext _context;
 		private readonly IFuzzySearchService _fuzzySearchService;
 		private readonly ILogger<WalletService> _logger;
+		private readonly IAppClock _appClock;
 
 		public WalletService(
 			GameSpacedatabaseContext context,
 			IFuzzySearchService fuzzySearchService,
-			ILogger<WalletService> logger)
+			ILogger<WalletService> logger,
+			IAppClock appClock)
 		{
 			_context = context ?? throw new ArgumentNullException(nameof(context));
 			_fuzzySearchService = fuzzySearchService ?? throw new ArgumentNullException(nameof(fuzzySearchService));
 			_logger = logger ?? throw new ArgumentNullException(nameof(logger));
+			_appClock = appClock ?? throw new ArgumentNullException(nameof(appClock));
 		}
 
 		/// <summary>
@@ -246,6 +250,278 @@ namespace GamiPort.Areas.MiniGame.Services
 					{ "TotalSpent", 0 },
 					{ "TransactionCount", 0 }
 				};
+			}
+		}
+
+		/// <summary>
+		/// 使用優惠券
+		/// 5層驗證: 存在性 > 重複使用 > 所有權 > 有效期 > 訂單ID
+		/// </summary>
+		public async Task<bool> UseCouponAsync(int couponId, int userId, int? orderId = null)
+		{
+			using var transaction = await _context.Database.BeginTransactionAsync();
+			try
+			{
+				// 1. 查詢優惠券（包含類型信息）
+				var coupon = await _context.Coupons
+					.Include(c => c.CouponType)
+					.FirstOrDefaultAsync(c => c.CouponId == couponId && !c.IsDeleted);
+
+				// 2. 驗證存在性
+				if (coupon == null)
+				{
+					_logger.LogWarning("優惠券不存在: CouponId={CouponId}", couponId);
+					await transaction.RollbackAsync();
+					return false;
+				}
+
+				// 3. 驗證是否已使用
+				if (coupon.IsUsed)
+				{
+					_logger.LogWarning("優惠券已使用: CouponId={CouponId}, UsedTime={UsedTime}", couponId, coupon.UsedTime);
+					await transaction.RollbackAsync();
+					return false;
+				}
+
+				// 4. 驗證所有權
+				if (coupon.UserId != userId)
+				{
+					_logger.LogWarning("優惠券不屬於該用戶: CouponId={CouponId}, UserId={UserId}, CouponUserId={CouponUserId}",
+						couponId, userId, coupon.UserId);
+					await transaction.RollbackAsync();
+					return false;
+				}
+
+				// 5. 驗證有效期（UTC+8 台灣時間）
+				if (coupon.CouponType != null)
+				{
+					var nowUtc = _appClock.UtcNow;
+					var now = _appClock.ToAppTime(nowUtc);
+
+					if (now < coupon.CouponType.ValidFrom)
+					{
+						_logger.LogWarning("優惠券尚未生效: CouponId={CouponId}, ValidFrom={ValidFrom}, Now={Now}",
+							couponId, coupon.CouponType.ValidFrom, now);
+						await transaction.RollbackAsync();
+						return false;
+					}
+
+					if (now > coupon.CouponType.ValidTo)
+					{
+						_logger.LogWarning("優惠券已過期: CouponId={CouponId}, ValidTo={ValidTo}, Now={Now}",
+							couponId, coupon.CouponType.ValidTo, now);
+						await transaction.RollbackAsync();
+						return false;
+					}
+				}
+
+				// 6. 標記為已使用
+				var usedTime = _appClock.ToAppTime(_appClock.UtcNow);
+				coupon.IsUsed = true;
+				coupon.UsedTime = usedTime;
+				if (orderId.HasValue)
+				{
+					coupon.UsedInOrderId = orderId.Value;
+				}
+
+				_context.Coupons.Update(coupon);
+				await _context.SaveChangesAsync();
+				await transaction.CommitAsync();
+
+				_logger.LogInformation("優惠券使用成功: CouponId={CouponId}, UserId={UserId}, OrderId={OrderId}",
+					couponId, userId, orderId);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				await transaction.RollbackAsync();
+				_logger.LogError(ex, "使用優惠券失敗: CouponId={CouponId}, UserId={UserId}", couponId, userId);
+				return false;
+			}
+		}
+
+		/// <summary>
+		/// 兌換電子禮券
+		/// 驗證: 存在性 > 重複使用 > 所有權 > 有效期
+		/// 創建兌換記錄（EvoucherRedeemLog）
+		/// </summary>
+		public async Task<bool> RedeemEVoucherAsync(int evoucherId, int userId)
+		{
+			using var transaction = await _context.Database.BeginTransactionAsync();
+			try
+			{
+				// 1. 查詢電子禮券（包含類型信息）
+				var evoucher = await _context.Evouchers
+					.Include(e => e.EvoucherType)
+					.FirstOrDefaultAsync(e => e.EvoucherId == evoucherId && !e.IsDeleted);
+
+				// 2. 驗證存在性
+				if (evoucher == null)
+				{
+					_logger.LogWarning("電子禮券不存在: EvoucherId={EvoucherId}", evoucherId);
+					await transaction.RollbackAsync();
+					return false;
+				}
+
+				// 3. 驗證是否已使用
+				if (evoucher.IsUsed)
+				{
+					_logger.LogWarning("電子禮券已使用: EvoucherId={EvoucherId}, UsedTime={UsedTime}",
+						evoucherId, evoucher.UsedTime);
+					await transaction.RollbackAsync();
+					return false;
+				}
+
+				// 4. 驗證所有權
+				if (evoucher.UserId != userId)
+				{
+					_logger.LogWarning("電子禮券不屬於該用戶: EvoucherId={EvoucherId}, UserId={UserId}, EvoucherUserId={EvoucherUserId}",
+						evoucherId, userId, evoucher.UserId);
+					await transaction.RollbackAsync();
+					return false;
+				}
+
+				// 5. 驗證有效期（UTC+8 台灣時間）
+				if (evoucher.EvoucherType != null)
+				{
+					var nowUtc = _appClock.UtcNow;
+					var now = _appClock.ToAppTime(nowUtc);
+
+					if (now < evoucher.EvoucherType.ValidFrom)
+					{
+						_logger.LogWarning("電子禮券尚未生效: EvoucherId={EvoucherId}, ValidFrom={ValidFrom}, Now={Now}",
+							evoucherId, evoucher.EvoucherType.ValidFrom, now);
+						await transaction.RollbackAsync();
+						return false;
+					}
+
+					if (now > evoucher.EvoucherType.ValidTo)
+					{
+						_logger.LogWarning("電子禮券已過期: EvoucherId={EvoucherId}, ValidTo={ValidTo}, Now={Now}",
+							evoucherId, evoucher.EvoucherType.ValidTo, now);
+						await transaction.RollbackAsync();
+						return false;
+					}
+				}
+
+				// 6. 標記為已使用
+				var usedTime = _appClock.ToAppTime(_appClock.UtcNow);
+				evoucher.IsUsed = true;
+				evoucher.UsedTime = usedTime;
+
+				// 7. 創建兌換記錄
+				var redeemLog = new EvoucherRedeemLog
+				{
+					EvoucherId = evoucherId,
+					UserId = userId,
+					ScannedAt = usedTime,
+					Status = "Redeemed",
+					IsDeleted = false
+				};
+
+				_context.Evouchers.Update(evoucher);
+				_context.EvoucherRedeemLogs.Add(redeemLog);
+				await _context.SaveChangesAsync();
+				await transaction.CommitAsync();
+
+				_logger.LogInformation("電子禮券兌換成功: EvoucherId={EvoucherId}, UserId={UserId}",
+					evoucherId, userId);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				await transaction.RollbackAsync();
+				_logger.LogError(ex, "兌換電子禮券失敗: EvoucherId={EvoucherId}, UserId={UserId}", evoucherId, userId);
+				return false;
+			}
+		}
+
+		/// <summary>
+		/// 獲取錢包交易歷史（分頁、篩選、模糊搜尋）
+		/// 支援 5 級優先級匹配和 OR 邏輯
+		/// </summary>
+		public async Task<(IEnumerable<WalletHistory> items, int totalCount)> GetWalletHistoryAsync(
+			int userId,
+			int pageNumber,
+			int pageSize,
+			string? changeType = null,
+			DateTime? startDate = null,
+			DateTime? endDate = null,
+			string? searchTerm = null)
+		{
+			try
+			{
+				// 確保頁碼和頁面大小有效
+				pageNumber = Math.Max(1, pageNumber);
+				pageSize = Math.Clamp(pageSize, 10, 200);
+
+				// 建立基礎查詢
+				var query = _context.WalletHistories
+					.AsNoTracking()
+					.Where(h => h.UserId == userId && !h.IsDeleted);
+
+				// 篩選交易類型
+				if (!string.IsNullOrWhiteSpace(changeType))
+				{
+					query = query.Where(h => h.ChangeType == changeType);
+				}
+
+				// 篩選日期範圍（轉換為 UTC）
+				if (startDate.HasValue)
+				{
+					var utcStart = _appClock.ToUtc(startDate.Value);
+					query = query.Where(h => h.ChangeTime >= utcStart);
+				}
+
+				if (endDate.HasValue)
+				{
+					var endDateUtc8 = endDate.Value.AddDays(1).AddTicks(-1);
+					var utcEnd = _appClock.ToUtc(endDateUtc8);
+					query = query.Where(h => h.ChangeTime <= utcEnd);
+				}
+
+				// 取得所有結果（用於模糊搜尋和排序）
+				var allResults = await query.ToListAsync();
+
+				// 應用模糊搜尋 (OR 邏輯: Description OR ItemCode)
+				if (!string.IsNullOrWhiteSpace(searchTerm))
+				{
+					allResults = allResults
+						.Where(h =>
+							_fuzzySearchService.IsMatch(searchTerm, h.Description, h.ItemCode)
+						)
+						.ToList();
+
+					// 按模糊搜尋優先順序排序
+					allResults = allResults
+						.OrderBy(h => _fuzzySearchService.CalculateMatchPriority(searchTerm, h.Description, h.ItemCode))
+						.ThenByDescending(h => h.ChangeTime)
+						.ToList();
+				}
+				else
+				{
+					// 無搜尋條件時，按交易時間降序排列
+					allResults = allResults
+						.OrderByDescending(h => h.ChangeTime)
+						.ToList();
+				}
+
+				// 計算總筆數
+				int totalCount = allResults.Count;
+
+				// 分頁
+				var items = allResults
+					.Skip((pageNumber - 1) * pageSize)
+					.Take(pageSize)
+					.ToList();
+
+				return (items, totalCount);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "獲取錢包交易歷史失敗: UserId={UserId}, SearchTerm={SearchTerm}",
+					userId, searchTerm);
+				return (Enumerable.Empty<WalletHistory>(), 0);
 			}
 		}
 	}

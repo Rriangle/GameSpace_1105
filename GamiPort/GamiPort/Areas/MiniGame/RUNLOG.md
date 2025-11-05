@@ -138,6 +138,89 @@
 
 ---
 
+### 21:45 - 實作優惠券/電子禮券使用功能與錢包交易歷史增強版 ✅
+
+**動作**:
+1. ✅ 閱讀 MUST-FOLLOW-RULES.txt 複習規範
+2. ✅ 並行啟動 5 個代理收集 GameSpace 實作信息（Coupon、EVoucher、WalletHistory、DB Schema、GamiPort現狀）
+3. ✅ 更新 IWalletService 介面 - 新增 3 個方法簽名
+4. ✅ 實作 WalletService.UseCouponAsync - 5層驗證（存在性、重複使用、所有權、有效期、訂單ID）
+5. ✅ 實作 WalletService.RedeemEVoucherAsync - 4層驗證 + EvoucherRedeemLog 創建
+6. ✅ 實作 WalletService.GetWalletHistoryAsync（增強版） - 分頁、篩選、5級模糊搜尋、OR邏輯
+7. ✅ 注入 IAppClock 依賴 - 支援 UTC+8 時間處理
+8. ✅ 驗證編譯成功 - `dotnet build` 0 個錯誤 ✓
+
+**變更檔案**:
+- `Services/IWalletService.cs` (+34 行)
+  - 新增 UseCouponAsync(int couponId, int userId, int? orderId) - 使用優惠券
+  - 新增 RedeemEVoucherAsync(int evoucherId, int userId) - 兌換電子禮券
+  - 新增 GetWalletHistoryAsync(...) - 增強版歷史查詢（7個參數：分頁、篩選、搜尋）
+
+- `Services/WalletService.cs` (+277 行)
+  - 注入 IAppClock 依賴（UTC+8 時間處理）
+  - 實作 UseCouponAsync:
+    - 5層驗證：存在性 → 重複使用 → 所有權 → 有效期 → 訂單ID
+    - 明確事務管理（BeginTransactionAsync/CommitAsync/RollbackAsync）
+    - UTC+8 時間設置 UsedTime
+    - 結構化日誌記錄（LogWarning/LogInformation/LogError）
+  - 實作 RedeemEVoucherAsync:
+    - 4層驗證：存在性 → 重複使用 → 所有權 → 有效期
+    - 創建 EvoucherRedeemLog 記錄（Status="Redeemed"）
+    - 事務確保 Evoucher + Log 原子性
+    - UTC+8 時間設置 UsedTime 和 ScannedAt
+  - 實作 GetWalletHistoryAsync（增強版）:
+    - 分頁控制：pageNumber (≥1), pageSize (10-200)
+    - 篩選：ChangeType、StartDate、EndDate（自動轉換UTC）
+    - 5級模糊搜尋：Description OR ItemCode
+    - 優先順序排序 + 次要排序（ChangeTime 降序）
+    - 回傳 (items, totalCount) tuple
+
+**原因與理由**:
+- 對應需求：HANDOFF.md 第 40-41 項「優惠券/電子禮券使用功能」、第 42 項「錢包交易歷史頁面」
+- 對應 DB 欄位：
+  - Coupon: IsUsed, UsedTime, UsedInOrderId
+  - Evoucher: IsUsed, UsedTime
+  - EvoucherRedeemLog: EvoucherId, UserId, ScannedAt, Status
+  - WalletHistory: UserId, ChangeType, PointsChanged, ItemCode, Description, ChangeTime
+- 設計模式：參考 GameSpace 實作（5個代理並行分析）
+- 事務處理：優惠券/禮券使用必須在事務內執行，確保資料一致性
+- 時間處理：使用 IAppClock 統一 UTC+8 台灣時間（ValidFrom/ValidTo 比較、UsedTime 設置）
+- 模糊搜尋：使用 IFuzzySearchService 5級優先順序 + OR邏輯（與 GameSpace 一致）
+
+**技術細節**:
+- **5層驗證流程**（UseCouponAsync）：
+  1. Coupon 存在性（!IsDeleted）
+  2. 重複使用檢查（!IsUsed）
+  3. 所有權驗證（coupon.UserId == userId）
+  4. 有效期驗證（ValidFrom ≤ now ≤ ValidTo，UTC+8）
+  5. 可選訂單ID設置
+- **兌換日誌**（RedeemEVoucherAsync）：
+  - EvoucherRedeemLog.Status = "Redeemed"
+  - ScannedAt 使用 UTC+8 台灣時間
+  - 事務確保 Evoucher.IsUsed 與 Log 同步
+- **增強版歷史查詢**（GetWalletHistoryAsync）：
+  - 先執行 DB 篩選（ChangeType、DateRange、Soft Delete）
+  - 再執行記憶體模糊搜尋（5級優先順序）
+  - 最後執行分頁（Skip/Take）
+  - 回傳總筆數用於前端分頁控制
+- **依賴注入**：新增 IAppClock 依賴，與 PetService/SignInService 一致
+
+**狀態**: 已完成 ✅
+
+**編譯結果**:
+```
+69 個警告（既有項目）
+0 個錯誤 ✓
+```
+
+**下一步**:
+- ~~實作 WalletController.History 頁面~~（前台不需要完整後台管理頁面）
+- ~~創建 History View~~（前台使用簡化版錢包頁面即可）
+- Git commit 並 push 備份
+- 考慮實作其他次要優先級項目（Constants/、Filters/、排行榜系統等）
+
+---
+
 ## 執行記錄模板
 
 ### YYYY-MM-DD HH:MM - [標題]
