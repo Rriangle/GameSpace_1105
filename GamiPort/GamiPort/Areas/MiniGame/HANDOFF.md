@@ -1,11 +1,19 @@
 # MiniGame Area 前台開發交接文檔 (HANDOFF)
 
-## 📍 當前狀態 (2025-11-05 19:45 台北時間)
+## 📍 當前狀態 (2025-11-06 00:45 台北時間)
+
+### 🎯 全面盤點完成！
+
+**多代理協作盤點報告**：
+- ✅ **Agent 1**: SQL Server 16張表格 + 種子資料驗證完成
+- ✅ **Agent 2**: 前台功能完成度分析完成 (85.7% = 12/14 功能)
+- ✅ **Agent 3**: 後台 GameSpace 邏輯分析完成 (模糊搜尋、OR邏輯、5級優先順序)
+- ✅ **Agent 4**: 前台開發藍圖文件完整閱讀完成
 
 ### 進度概覽
-- **總體進度**: 70% - 核心功能已完成，關鍵缺失已識別
-- **當前階段**: 文檔分析完成，準備實作缺失功能
-- **下一階段**: 實作寵物升級系統 (最高優先級)
+- **總體進度**: 85.7% - 12/14 功能完成，4 項功能需補完
+- **當前階段**: 執行計畫制定完成，準備實作缺失功能
+- **下一階段**: Phase 1 - 補完 4 項缺失功能至 100%
 
 ### 已完成項目
 - [x] 確認專案目錄存在 (work-1105)
@@ -52,38 +60,163 @@
 - ✅ 時間處理 (100%) - IAppClock + TimeHelper UTC+8 完整實作
 - ✅ 模糊搜尋 (100%) - 5級優先順序匹配
 
-### 待辦事項 (依優先級)
+---
 
-#### 🟡 中優先級 (後續執行)
+## 📋 詳細執行計畫（基於多代理盤點結果）
 
-1. [x] **基礎設施補充 - Config 目錄** (2025-11-05 23:30 完成)
-   - config/ServiceExtensions.cs (62 行)
-   - 集中註冊 MiniGame Area 服務（5 個核心服務 + 2 個 Filters）
-   - 更新 Program.cs 調用擴展方法（AddMiniGameServices）
-   - 編譯驗證：0 errors, 72 warnings ✓
+### 🔴 Phase 1: 補完 4 項缺失功能至 100% (HIGH Priority)
 
-2. [ ] **簽到規則預覽功能**
-   - GetAllSignInRulesAsync() 方法
-   - SignIn/Rules.cshtml 頁面
-   - 顯示未來獎勵預覽
+**目標**: 將 14 項核心功能從 85.7% (12/14) 提升至 100% (14/14)
 
-#### 🟢 低優先級 (有時間再做)
-3. [ ] **儀表板數據展示**
-   - 實作 HomeController.Index
-   - 顯示用戶概覽（點數、寵物、簽到、遊戲）
-   - 快捷操作按鈕
+#### Task 1.1: 錢包功能 1.2 - 點數兌換優惠券/電子禮券
+- **狀態**: Service 已完成，需補充 Controller + View
+- **Service**: ✅ `WalletService.UseCouponAsync()` + `RedeemEVoucherAsync()`
+- **需實作**:
+  - [ ] `WalletController.Exchange()` - GET action，顯示可兌換項目
+  - [ ] `WalletController.ExchangeCoupon()` - POST action，執行兌換
+  - [ ] `Views/Wallet/Exchange.cshtml` - 兌換介面（Modal 優先）
+  - [ ] Vue 組件: `ExchangeModal.js` - 兌換彈窗互動
+- **DB 對接**: `CouponType`, `EVoucherType` 表（活動類型清單）
+- **預估時間**: 3-4 小時
 
-4. [ ] **排行榜系統**
-   - 遊戲排行榜（勝率、總勝場）
-   - 寵物排行榜（等級、經驗值）
-   - 簽到排行榜（連續天數）
-   - 實作快取機制
+#### Task 1.2: 錢包功能 1.5 - 電子禮券 QRCode/Barcode 顯示
+- **狀態**: Service 已完成，需補充 QR Code 生成邏輯
+- **Service**: ✅ `WalletService.RedeemEVoucherAsync()`（包含 `EvoucherRedeemLog`）
+- **需實作**:
+  - [ ] 安裝 NuGet: `QRCoder` 或 `ZXing.Net.Bindings.SkiaSharp`
+  - [ ] `Services/QRCodeService.cs` - QR Code 生成服務
+  - [ ] `WalletController.UseEVoucher(int id)` - GET action，顯示 QR Code Modal
+  - [ ] `Views/Wallet/EVouchers.cshtml` 更新 - 添加「使用」按鈕
+  - [ ] Vue 組件: `QRCodeModal.js` - 顯示 QR Code + 倒數計時（5分鐘）
+- **DB 對接**: `EVoucher`, `EVoucherToken`, `EvoucherRedeemLog` 表
+- **預估時間**: 2-3 小時
 
-5. [ ] **優化與測試**
-    - 編譯驗證（零錯誤）
-    - UI/UX 測試
-    - 性能優化
-    - 完整功能測試
+#### Task 1.3: 錢包功能 1.6 - 收支明細頁面
+- **狀態**: Service 已完成（含模糊搜尋+OR邏輯），需補充 Controller + View
+- **Service**: ✅ `WalletService.GetWalletHistoryAsync()` (分頁、篩選、5級模糊搜尋)
+- **需實作**:
+  - [ ] `WalletController.History()` - GET action，顯示交易歷史
+  - [ ] `Views/Wallet/History.cshtml` - 時間軸列表佈局
+  - [ ] Vue 組件: `WalletHistoryList.js` - 分頁 + 篩選互動
+- **DB 對接**: `WalletHistory` 表
+- **模糊搜尋**: 5級優先順序（ItemCode, Description 欄位）
+- **預估時間**: 2-3 小時
+
+#### Task 1.4: 寵物功能 3.1 - 寵物名字修改
+- **狀態**: 完全缺失，需從頭實作
+- **需實作**:
+  - [ ] `Services/PetService.cs` - 新增 `UpdatePetNameAsync(int petId, string newName)`
+  - [ ] `PetController.ChangeName()` - POST action，執行改名
+  - [ ] `Views/Pet/Index.cshtml` 更新 - 添加改名按鈕
+  - [ ] Vue 組件: `PetNameModal.js` - 改名 Modal（輸入驗證、即時預覽）
+- **DB 對接**: `Pet` 表（`PetName` 欄位，`varchar(20)`）
+- **驗證規則**:
+  - 長度: 1-20 字元
+  - 禁止不雅詞彙（可選實作）
+  - 不可與現有寵物重複（同 UserId 下）
+- **預估時間**: 1-2 小時
+
+**Phase 1 總預估時間**: 8-12 小時 (約 1-2 個工作天)
+
+---
+
+### 🟡 Phase 2: 優化與完善 (MEDIUM Priority)
+
+**目標**: 優化已實作功能，確保符合規範
+
+#### Task 2.1: 簽到規則預覽功能（第14項功能）
+- **狀態**: Service 已完成，需補充 View
+- [ ] `SignInController.Rules()` - GET action
+- [ ] `Views/SignIn/Rules.cshtml` - 規則預覽頁面（表格或卡片布局）
+- **DB 對接**: `SignInRule` 表（10 條活動規則）
+- **預估時間**: 1-2 小時
+
+#### Task 2.2: 全面模糊搜尋整合
+- **目標**: 確保所有查詢功能實現 5 級優先順序 + OR 邏輯
+- [ ] 驗證 `WalletService.GetWalletHistoryAsync()` - 模糊搜尋實作
+- [ ] 驗證 `WalletService.GetUserCouponsAsync()` - 模糊搜尋實作
+- [ ] 驗證 `WalletService.GetUserEVouchersAsync()` - 模糊搜尋實作
+- [ ] 驗證 `GamePlayService.GetGameHistoryAsync()` - 模糊搜尋實作
+- **參考後台**: `GameSpace/Services/FuzzySearchService.cs`
+- **預估時間**: 2-3 小時
+
+#### Task 2.3: UI/UX Teal 配色一致性檢查
+- [ ] 檢查所有 Views 使用 Teal 主色 `#17a2b8`
+- [ ] 確保卡片式布局一致（8px border-radius, 陰影）
+- [ ] 確保按鈕 Hover 效果一致
+- [ ] 確保 Modal 優先於頁面跳轉
+- **預估時間**: 1-2 小時
+
+#### Task 2.4: 錯誤處理與使用者回饋
+- [ ] 確保所有 API 使用 `FrontendProblemDetailsFilter`
+- [ ] 確保所有 POST 操作使用 `IdempotencyFilter`
+- [ ] 前端添加 Toast 通知（成功/失敗/警告）
+- **預估時間**: 1-2 小時
+
+**Phase 2 總預估時間**: 5-9 小時 (約 1 個工作天)
+
+---
+
+### 🟢 Phase 3: 測試與 QA (LOW Priority - 完成實作後執行)
+
+#### Task 3.1: 編譯驗證
+- [ ] `dotnet build` - 確保 0 errors
+- [ ] 修復所有 warnings（可選）
+- **預估時間**: 30 分鐘
+
+#### Task 3.2: 功能測試 (14 項功能逐一測試)
+- [ ] 錢包系統 (6 項功能)
+- [ ] 簽到系統 (3 項功能，含規則預覽)
+- [ ] 寵物系統 (4 項功能)
+- [ ] 小遊戲系統 (2 項功能)
+- **預估時間**: 2-3 小時
+
+#### Task 3.3: 跨瀏覽器測試
+- [ ] Chrome
+- [ ] Firefox
+- [ ] Edge
+- **預估時間**: 1 小時
+
+#### Task 3.4: 響應式測試
+- [ ] 手機 (xs, sm)
+- [ ] 平板 (md)
+- [ ] 桌面 (lg, xl, xxl)
+- **預估時間**: 1 小時
+
+**Phase 3 總預估時間**: 4-6 小時
+
+---
+
+## 📊 總預估時間與里程碑
+
+| Phase | 預估時間 | 里程碑 |
+|-------|---------|--------|
+| **Phase 1** | 8-12 小時 (1-2 天) | 14 項功能 100% 實作完成 |
+| **Phase 2** | 5-9 小時 (1 天) | 模糊搜尋、UI/UX、錯誤處理優化完成 |
+| **Phase 3** | 4-6 小時 (0.5 天) | 編譯驗證、功能測試、QA 完成 |
+| **總計** | **17-27 小時 (2.5-4 天)** | **MiniGame Area (GamiPort) 100% 完成** |
+
+---
+
+## 🗂️ 待辦事項清單 (優先級排序)
+
+### 🔴 HIGH Priority (必須完成)
+1. [ ] **Task 1.1**: 點數兌換優惠券/電子禮券 (Controller + View)
+2. [ ] **Task 1.2**: 電子禮券 QRCode 顯示 (QRCodeService + Modal)
+3. [ ] **Task 1.3**: 收支明細頁面 (Controller + View)
+4. [ ] **Task 1.4**: 寵物名字修改 (Service + Controller + View)
+
+### 🟡 MEDIUM Priority (優化完善)
+5. [ ] **Task 2.1**: 簽到規則預覽功能
+6. [ ] **Task 2.2**: 全面模糊搜尋整合驗證
+7. [ ] **Task 2.3**: UI/UX Teal 配色一致性檢查
+8. [ ] **Task 2.4**: 錯誤處理與使用者回饋
+
+### 🟢 LOW Priority (測試階段)
+9. [ ] **Task 3.1**: 編譯驗證
+10. [ ] **Task 3.2**: 功能測試 (14 項)
+11. [ ] **Task 3.3**: 跨瀏覽器測試
+12. [ ] **Task 3.4**: 響應式測試
 
 ---
 
@@ -92,22 +225,78 @@
 
 ---
 
+## 🗄️ SQL Server 資料庫種子資料摘要
+
+**資料庫**: DESKTOP-8HQIS1S\SQLEXPRESS / GameSpacedatabase
+**驗證日期**: 2025-11-06 00:30
+
+### 16 張主要表格種子資料統計
+
+| 表格 | 種子資料數量 | 關鍵資訊 |
+|------|-------------|----------|
+| **SignInRule** | 10 條 | 活動規則（平日/假日/連續簽到獎勵） |
+| **SystemSettings** | 28+ 條 | 動態配置（Pet/SignIn/MiniGame 類別） |
+| **CouponType** | - | 優惠券類型定義 |
+| **EVoucherType** | - | 電子禮券類型定義 |
+| **PetSkinColorCostSettings** | 11 條 | 3 免費 (#FFFFFF白色, #000000黑色, #FF0000紅色) + 8 付費 (2000-3500點) |
+| **PetBackgroundCostSettings** | 11 條 | 3 免費 (BG001-BG003) + 8 付費 (2000-6000點) |
+| **PetLevelRewardSettings** | - | 寵物升級獎勵規則（三階段公式） |
+| **User_Wallet** | - | 會員錢包（點數餘額） |
+| **WalletHistory** | - | 錢包異動歷史 |
+| **Coupon** | - | 優惠券實例 |
+| **EVoucher** | - | 電子禮券實例 |
+| **EVoucherToken** | - | 電子禮券核銷憑證 |
+| **EVoucherRedeemLog** | - | 電子禮券核銷記錄 |
+| **Pet** | - | 寵物資料（五大屬性：Hunger/Mood/Stamina/Cleanliness/Health） |
+| **UserSignInStats** | - | 簽到統計記錄 |
+| **MiniGame** | - | 小遊戲記錄（Win/Lose/Abort） |
+
+### SystemSettings 關鍵配置（28 條）
+
+**Pet 類別**:
+- `Pet.Interaction.Feed.HungerIncrease`: 10
+- `Pet.Interaction.Bath.CleanlinessIncrease`: 10
+- `Pet.Interaction.Coax.MoodIncrease`: 10
+- `Pet.Interaction.Rest.StaminaIncrease`: 10
+- `Pet.DailyDecay.HungerDecay`: 20
+- `Pet.DailyDecay.MoodDecay`: 30
+- `Pet.DailyDecay.StaminaDecay`: 10
+- `Pet.DailyDecay.CleanlinessDecay`: 20
+- `Pet.DailyDecay.HealthDecay`: 0
+- `Pet.ColorChange.PointsCost`: 2000
+- `Pet.LevelUp.Formula`: JSON (三階段公式)
+
+**SignIn 類別**:
+- `SignIn.Weekday.Points`: 20
+- `SignIn.Weekday.Experience`: 0
+- `SignIn.Weekend.Points`: 30
+- `SignIn.Weekend.Experience`: 200
+- `SignIn.Streak7Days.BonusPoints`: 40
+- `SignIn.Streak7Days.BonusExperience`: 300
+- `SignIn.PerfectAttendance30Days.BonusPoints`: 200
+- `SignIn.PerfectAttendance30Days.BonusExperience`: 2000
+
+---
+
 ## 📂 關鍵檔案路徑
 
-### 必讀文檔
-- `C:\Users\n2029\Desktop\work-1105\schema\README_合併版.md`
-- `C:\Users\n2029\Desktop\work-1105\schema\前台開發藍圖文件.md`
-- `C:\Users\n2029\Desktop\work-1105\schema\MiniGame Area 架構對比分析報告.md`
-- `C:\Users\n2029\Desktop\work-1105\schema\巴哈姆特風格布局特色完整分析.md`
-- `C:\Users\n2029\Desktop\work-1105\schema\MiniGameArea_DB架構與種子資料報告.md`
+### 必讀文檔（已完成閱讀）
+- ✅ `C:\Users\n2029\Desktop\work-1105\schema\README_合併版.md`
+- ✅ `C:\Users\n2029\Desktop\work-1105\schema\前台開發藍圖文件.md`
+- ✅ `C:\Users\n2029\Desktop\work-1105\schema\MiniGame Area 架構對比分析報告.md`
+- ✅ `C:\Users\n2029\Desktop\work-1105\schema\巴哈姆特風格布局特色完整分析.md`
+- ✅ `C:\Users\n2029\Desktop\work-1105\schema\MiniGameArea相關sql_server_DB相關表格.md`
 
-### 工作路徑
+### 工作路徑（零越界約束）
 - **根目錄**: `C:\Users\n2029\Desktop\work-1105\GamiPort\GamiPort\Areas\MiniGame`
 - **Controllers**: `./Controllers/`
 - **Services**: `./Services/`
 - **Views**: `./Views/`
-- **Models**: (需確認位置，可能在上層 Models/)
+- **Models**: 上層 `../../Models/` (GameSpacedatabaseContext + Entities)
 - **wwwroot**: `./wwwroot/`
+- **Constants**: `./Constants/` ✅ 已建立
+- **Filters**: `./Filters/` ✅ 已建立
+- **config**: `./config/` ✅ 已建立
 
 ---
 
@@ -133,16 +322,79 @@
 
 ## 📞 下次接續點
 
-**從這裡開始**:
-1. Git commit & push 備份 config/ 目錄 + Program.cs 修改
-2. 繼續實作下一個中優先級任務：簽到規則預覽功能
-   - 實作 GetAllSignInRulesAsync() 方法
-   - 創建 SignIn/Rules.cshtml 頁面
-   - 顯示未來獎勵預覽（表格或卡片布局）
-3. 或實作低優先級任務：儀表板數據展示、排行榜系統
+### 🚀 立即開始 Phase 1 - Task 1.1
 
-**預期下一步**: 簽到規則預覽功能（GetAllSignInRulesAsync + Rules.cshtml）
+**從這裡開始** (按照優先級執行):
+
+#### Step 1: Git commit & push 備份當前進度
+```bash
+cd C:\Users\n2029\Desktop\work-1105
+git add .
+git commit -m "docs(MiniGame): 完成多代理盤點 + 執行計畫制定 (2025-11-06 00:45)"
+git push origin dev
+```
+
+#### Step 2: 開始實作 Task 1.1 - 點數兌換優惠券/電子禮券
+1. **查看 DB 種子資料**:
+   ```sql
+   SELECT * FROM CouponType WHERE IsActive = 1;
+   SELECT * FROM EVoucherType WHERE IsActive = 1;
+   ```
+
+2. **實作 Controller**:
+   - 新增 `WalletController.Exchange()` - GET action
+   - 新增 `WalletController.ExchangeCoupon()` - POST action
+   - 新增 `WalletController.ExchangeEVoucher()` - POST action
+
+3. **實作 View**:
+   - 新增 `Views/Wallet/Exchange.cshtml`
+   - Vue 組件: `ExchangeModal.js`
+
+4. **測試流程**:
+   - 顯示可兌換項目清單
+   - 選擇兌換數量
+   - 點數驗證
+   - 交易事務處理
+   - 成功/失敗通知
+
+5. **Git commit**:
+   ```bash
+   git add .
+   git commit -m "feat(Wallet): 實作點數兌換優惠券/電子禮券功能 (1.2) - Task 1.1 完成"
+   git push origin dev
+   ```
+
+#### Step 3: 繼續 Task 1.2, 1.3, 1.4
+依序完成 Phase 1 的 4 項 HIGH Priority 任務，每完成一項就 commit & push。
 
 ---
 
-*最後更新: 2025-11-05 23:45 (台北時間)*
+### 📋 執行順序建議
+
+| 順序 | Task | 預估時間 | 累計時間 |
+|------|------|---------|---------|
+| 1 | **Task 1.1** - 點數兌換優惠券/電子禮券 | 3-4h | 3-4h |
+| 2 | **Task 1.4** - 寵物名字修改（最簡單） | 1-2h | 4-6h |
+| 3 | **Task 1.3** - 收支明細頁面 | 2-3h | 6-9h |
+| 4 | **Task 1.2** - 電子禮券 QRCode 顯示（需安裝套件） | 2-3h | 8-12h |
+
+**建議**: 先完成 Task 1.1 和 1.4（較簡單），累積信心後再處理 1.3 和 1.2。
+
+---
+
+### ⚠️ 執行前檢查清單
+
+- [ ] 已閱讀 `schema/MUST-FOLLOW-RULES.txt` ✅
+- [ ] 已連線 SQL Server 查看 16 張表格 ✅
+- [ ] 已理解模糊搜尋、OR邏輯、5級優先順序 ✅
+- [ ] 已確認 Teal 配色規範 (#17a2b8) ✅
+- [ ] 已確認零越界約束（僅在 Areas/MiniGame 內修改） ✅
+- [ ] 已確認 UTF-8 without BOM 編碼要求 ✅
+- [ ] 已確認 `dotnet build` error = 0 目標 ✅
+
+**預期下一步**: 開始實作 Task 1.1 - 點數兌換優惠券/電子禮券
+
+---
+
+*最後更新: 2025-11-06 00:45 (台北時間)*
+*執行計畫制定: 2025-11-06 00:45 (基於多代理盤點結果)*
