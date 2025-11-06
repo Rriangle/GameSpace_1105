@@ -90,10 +90,10 @@ namespace GamiPort.Areas.MiniGame.Controllers
 			if (pet == null)
 			{
 				ViewBag.ErrorMessage = "未找到寵物信息";
-				return View("Customize");
+				return View();
 			}
 
-			// 獲取可用的膚色和背景
+			// 獲取可用的膚色和背景（所有11種，包括限時活動限定已失效的）
 			var skins = await _petService.GetAvailableSkinsAsync();
 			var backgrounds = await _petService.GetAvailableBackgroundsAsync();
 
@@ -102,7 +102,7 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				.AsNoTracking()
 				.FirstOrDefaultAsync(w => w.UserId == userId && !w.IsDeleted);
 
-				ViewBag.Skins = skins;
+			ViewBag.Skins = skins;
 			ViewBag.Backgrounds = backgrounds;
 			ViewBag.Wallet = wallet;
 

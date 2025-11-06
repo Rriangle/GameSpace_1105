@@ -1,16 +1,18 @@
 @using GamiPort.Areas.MiniGame.Helpers
-@model dynamic
+@model GamiPort.Models.Pet
 @{
     ViewData["Title"] = "寵物定制";
-    var userPoints = ViewBag.UserPoints ?? 0;
-    var skinColorOptions = ViewBag.SkinColorOptions as List<dynamic> ?? new List<dynamic>();
-    var backgroundColorOptions = ViewBag.BackgroundColorOptions as List<dynamic> ?? new List<dynamic>();
-    var currentSkinColor = ViewBag.CurrentSkinColor ?? "#ff6b6b";
-    var currentBackgroundColor = ViewBag.CurrentBackgroundColor ?? "#ffffff";
+    var wallet = ViewBag.Wallet as GamiPort.Models.UserWallet;
+    var userPoints = wallet?.UserPoint ?? 0;
+    var skins = ViewBag.Skins as IEnumerable<GamiPort.Models.PetSkinColorCostSetting> ?? new List<GamiPort.Models.PetSkinColorCostSetting>();
+    var backgrounds = ViewBag.Backgrounds as IEnumerable<GamiPort.Models.PetBackgroundCostSetting> ?? new List<GamiPort.Models.PetBackgroundCostSetting>();
+    var currentSkinColor = Model?.SkinColor ?? "#FFFFFF";
+    var currentBackgroundColor = Model?.BackgroundColor ?? "BG001";
 }
 
 @if (User.Identity?.IsAuthenticated == true)
 {
+    @Html.AntiForgeryToken()
     <style>
         .customize-page-bg {
             background: linear-gradient(180deg, #f0f4f8 0%, #ffffff 100%);
@@ -305,12 +307,12 @@
             </div>
 
             <!-- Preview Card -->
-            <div class="preview-card" id="previewCard" style="background-color: @currentBackgroundColor">
+            <div class="preview-card" id="previewCard" style="background-image: url('@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")'); background-size: cover; background-position: center;">
                 <div class="preview-header">預覽</div>
                 <div class="preview-pet-avatar" style="background-color: @currentSkinColor; border-color: white;">
                     <i class="bi bi-heart-fill text-white"></i>
                 </div>
-                <div class="preview-pet-name" id="previewPetName">@(ViewBag.PetName ?? "我的寵物")</div>
+                <div class="preview-pet-name" id="previewPetName">@(Model?.PetName ?? "我的寵物")</div>
             </div>
 
             <!-- Skin Color Customization -->
@@ -387,41 +389,60 @@
     </div>
 
     <script>
-        // Sample data - in production, these should come from the server
+        // Load skin color options from server (all 11 colors from database)
         const skinColorOptions = [
-            { color: '#ff6b6b', name: '紅色', cost: 100 },
-            { color: '#ffa500', name: '橙色', cost: 100 },
-            { color: '#ffd93d', name: '黃色', cost: 100 },
-            { color: '#6bcf7f', name: '綠色', cost: 100 },
-            { color: '#4ecdc4', name: '青色', cost: 150 },
-            { color: '#17a2b8', name: '靛色', cost: 150 },
-            { color: '#6c5ce7', name: '紫色', cost: 200 },
-            { color: '#fd79a8', name: '粉色', cost: 100 }
+            @foreach (var skin in skins)
+            {
+                var isLastItem = skin.SettingId == skins.Max(s => s.SettingId);
+                var isExpired = isLastItem; // 最後一個為限時活動限定已失效
+                <text>{
+                    color: '@skin.ColorCode',
+                    name: '@skin.ColorName@(isExpired ? " (限時活動限定已失效)" : "")',
+                    cost: @skin.PointsCost,
+                    isExpired: @(isExpired ? "true" : "false")
+                },</text>
+            }
         ];
 
+        // Load background options from server (all 11 backgrounds from database)
         const backgroundColorOptions = [
-            { color: '#ffffff', name: '白色', cost: 0 },
-            { color: '#f0f4f8', name: '淺藍', cost: 0 },
-            { color: '#e8f0f4', name: '冰藍', cost: 50 },
-            { color: '#fff8e1', name: '淺黃', cost: 50 },
-            { color: '#e8f5e9', name: '淺綠', cost: 50 },
-            { color: '#fce4ec', name: '淺粉', cost: 75 }
+            @foreach (var bg in backgrounds)
+            {
+                var isLastItem = bg.SettingId == backgrounds.Max(b => b.SettingId);
+                var isExpired = isLastItem; // 最後一個為限時活動限定已失效
+                var imagePath = $"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{bg.BackgroundCode}.png";
+                <text>{
+                    code: '@bg.BackgroundCode',
+                    name: '@bg.BackgroundName@(isExpired ? " (限時活動限定已失效)" : "")',
+                    cost: @bg.PointsCost,
+                    image: '@imagePath',
+                    isExpired: @(isExpired ? "true" : "false")
+                },</text>
+            }
         ];
 
         let selectedSkinColor = '@currentSkinColor';
         let selectedBackgroundColor = '@currentBackgroundColor';
+        let selectedBackgroundImage = '@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")';
 
         function initializeSkinColors() {
             const grid = document.getElementById('skinColorGrid');
             grid.innerHTML = '';
             skinColorOptions.forEach(option => {
                 const div = document.createElement('div');
-                div.className = `color-option ${option.color === selectedSkinColor ? 'selected' : ''}`;
-                div.onclick = () => selectSkinColor(option.color, option.cost);
+                const isSelected = option.color === selectedSkinColor;
+                const isDisabled = option.isExpired;
+
+                div.className = `color-option ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`;
+
+                if (!isDisabled) {
+                    div.onclick = () => selectSkinColor(option.color, option.cost);
+                }
+
                 div.innerHTML = `
-                    <div class="color-swatch" style="background-color: ${option.color}"></div>
-                    <div class="color-label">${option.name}</div>
-                    <div class="color-cost">${option.cost} 點</div>
+                    <div class="color-swatch" style="background-color: ${option.color}; ${isDisabled ? 'opacity: 0.4; cursor: not-allowed;' : ''}"></div>
+                    <div class="color-label" style="${isDisabled ? 'color: #999;' : ''}">${option.name}</div>
+                    <div class="color-cost" style="${isDisabled ? 'background: #e0e0e0; color: #999;' : ''}">${option.cost} 點</div>
                 `;
                 grid.appendChild(div);
             });
@@ -432,12 +453,19 @@
             grid.innerHTML = '';
             backgroundColorOptions.forEach(option => {
                 const div = document.createElement('div');
-                div.className = `background-option ${option.color === selectedBackgroundColor ? 'selected' : ''}`;
-                div.onclick = () => selectBackgroundColor(option.color, option.cost);
+                const isSelected = option.code === selectedBackgroundColor;
+                const isDisabled = option.isExpired;
+
+                div.className = `background-option ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`;
+
+                if (!isDisabled) {
+                    div.onclick = () => selectBackgroundColor(option.code, option.cost, option.image);
+                }
+
                 div.innerHTML = `
-                    <div class="background-swatch" style="background-color: ${option.color}"></div>
-                    <div class="color-label">${option.name}</div>
-                    <div class="color-cost">${option.cost} 點</div>
+                    <div class="background-swatch" style="background-image: url('${option.image}'); background-size: cover; background-position: center; ${isDisabled ? 'opacity: 0.4; cursor: not-allowed;' : ''}"></div>
+                    <div class="color-label" style="${isDisabled ? 'color: #999;' : ''}">${option.name}</div>
+                    <div class="color-cost" style="${isDisabled ? 'background: #e0e0e0; color: #999;' : ''}">${option.cost} 點</div>
                 `;
                 grid.appendChild(div);
             });
@@ -448,32 +476,52 @@
             document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
             event.target.closest('.color-option').classList.add('selected');
             document.getElementById('skinColorCost').textContent = cost;
-            document.getElementById('previewCard').style.backgroundColor = selectedBackgroundColor;
+
+            // Update preview pet avatar color (keep background image)
             document.querySelector('.preview-pet-avatar').style.backgroundColor = color;
+
             document.getElementById('confirmSkinColor').disabled = false;
         }
 
-        function selectBackgroundColor(color, cost) {
-            selectedBackgroundColor = color;
+        function selectBackgroundColor(code, cost, image) {
+            selectedBackgroundColor = code;
+            selectedBackgroundImage = image;
             document.querySelectorAll('.background-option').forEach(el => el.classList.remove('selected'));
             event.target.closest('.background-option').classList.add('selected');
             document.getElementById('backgroundColorCost').textContent = cost;
-            document.getElementById('previewCard').style.backgroundColor = color;
+
+            // Update preview card with background image
+            const previewCard = document.getElementById('previewCard');
+            previewCard.style.backgroundImage = `url('${image}')`;
+            previewCard.style.backgroundSize = 'cover';
+            previewCard.style.backgroundPosition = 'center';
+            previewCard.style.backgroundColor = ''; // Clear background color
+
             document.getElementById('confirmBackgroundColor').disabled = false;
         }
 
         function resetSkinColorSelection() {
             selectedSkinColor = '@currentSkinColor';
             initializeSkinColors();
-            document.getElementById('previewCard').style.backgroundColor = selectedBackgroundColor;
+
+            // Restore preview pet avatar color (keep background image)
             document.querySelector('.preview-pet-avatar').style.backgroundColor = selectedSkinColor;
+
             document.getElementById('confirmSkinColor').disabled = true;
         }
 
         function resetBackgroundColorSelection() {
             selectedBackgroundColor = '@currentBackgroundColor';
+            selectedBackgroundImage = '@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")';
             initializeBackgroundColors();
-            document.getElementById('previewCard').style.backgroundColor = selectedBackgroundColor;
+
+            // Restore preview card background
+            const previewCard = document.getElementById('previewCard');
+            previewCard.style.backgroundImage = `url('${selectedBackgroundImage}')`;
+            previewCard.style.backgroundSize = 'cover';
+            previewCard.style.backgroundPosition = 'center';
+            previewCard.style.backgroundColor = '';
+
             document.getElementById('confirmBackgroundColor').disabled = true;
         }
 
@@ -489,21 +537,28 @@
         });
 
         document.getElementById('confirmBackgroundColor').addEventListener('click', async function () {
-            const cost = parseInt(backgroundColorOptions.find(o => o.color === selectedBackgroundColor).cost);
+            const cost = parseInt(backgroundColorOptions.find(o => o.code === selectedBackgroundColor).cost);
             if (await confirmCustomization('背景', cost)) {
                 document.querySelectorAll('.background-option').forEach(el => el.classList.remove('selected'));
-                document.querySelector(`.background-option[style*="${selectedBackgroundColor}"]`)?.classList.add('selected');
+                // Re-initialize to show updated selection
+                initializeBackgroundColors();
                 showSuccessMessage('背景更換成功！');
             }
         });
 
         async function confirmCustomization(type, cost) {
             try {
+                // 獲取 anti-forgery token
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
                 // 調用實際 API
                 const response = await fetch('/MiniGame/Pet/UpdateAppearance', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `skinColor=${encodeURIComponent(selectedSkinColor)}&background=${encodeURIComponent(selectedBackgroundColor)}`
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token || ''
+                    },
+                    body: `skinColor=${encodeURIComponent(selectedSkinColor)}&background=${encodeURIComponent(selectedBackgroundColor)}&__RequestVerificationToken=${encodeURIComponent(token || '')}`
                 });
 
                 const result = await response.json();

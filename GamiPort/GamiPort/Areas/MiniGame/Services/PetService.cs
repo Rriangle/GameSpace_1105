@@ -437,25 +437,25 @@ namespace GamiPort.Areas.MiniGame.Services
 		}
 
 		/// <summary>
-		/// 獲取可用的膚色列表
+		/// 獲取可用的膚色列表（包括所有11種，含限時活動限定已失效的）
 		/// </summary>
 		public async Task<IEnumerable<PetSkinColorCostSetting>> GetAvailableSkinsAsync()
 		{
 			return await _context.PetSkinColorCostSettings
 				.AsNoTracking()
-				.Where(s => !s.IsDeleted && s.IsActive)
+				.Where(s => !s.IsDeleted)
 				.OrderBy(s => s.DisplayOrder)
 				.ToListAsync();
 		}
 
 		/// <summary>
-		/// 獲取可用的背景列表
+		/// 獲取可用的背景列表（包括所有11種，含限時活動限定已失效的）
 		/// </summary>
 		public async Task<IEnumerable<PetBackgroundCostSetting>> GetAvailableBackgroundsAsync()
 		{
 			return await _context.PetBackgroundCostSettings
 				.AsNoTracking()
-				.Where(s => !s.IsDeleted && s.IsActive)
+				.Where(s => !s.IsDeleted)
 				.OrderBy(s => s.DisplayOrder ?? 0)
 				.ToListAsync();
 		}
