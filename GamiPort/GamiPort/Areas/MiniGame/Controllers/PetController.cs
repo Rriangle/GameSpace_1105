@@ -61,6 +61,7 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				.FirstOrDefaultAsync(w => w.UserId == userId && !w.IsDeleted);
 
 				ViewBag.Wallet = wallet;
+			ViewBag.UserPoints = wallet?.UserPoint ?? 0;  // 添加用戶點數供View使用
 			ViewBag.PetHealthStatus = GetHealthStatus(pet);
 
 			return View(pet);

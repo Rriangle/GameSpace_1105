@@ -348,10 +348,6 @@
                         <p class="text-muted mb-0">與您的寵物互動，一起成長冒險吧！</p>
                     </div>
                 </div>
-                <div class="text-end">
-                    <small class="text-muted d-block">您的點數</small>
-                    <h4 class="mb-0 text-teal fw-bold">@userPoints</h4>
-                </div>
             </div>
 
             @if (Model != null)
@@ -594,8 +590,8 @@
                                         <span class="fw-bold text-teal">@(Model.ExperienceToNextLevel ?? 0)</span>
                                     </div>
                                     <div class="d-flex justify-content-between">
-                                        <span class="stat-label">升級時間</span>
-                                        <span class="fw-bold">@Model.LevelUpTime.ToUtc8String("MM/dd")</span>
+                                        <span class="stat-label">最後升級時間</span>
+                                        <span class="fw-bold">@Model.LevelUpTime.ToUtc8String("yyyy/MM/dd")</span>
                                     </div>
                                 </div>
                                 @if (Model.PointsGainedLevelUp > 0)
@@ -619,7 +615,7 @@
                                         <i class="bi bi-palette-fill me-2"></i>當前膚色
                                     </label>
                                     <div class="d-flex align-items-center gap-2">
-                                        <div style="width: 40px; height: 40px; background-color: @Model.SkinColor; border-radius: 50%; border: 3px solid #ddd;"></div>
+                                        <div style="width: 40px; height: 40px; background-color: @Model.SkinColor; border-radius: 50%; border: 3px solid #F0F0F0;"></div>
                                         <span class="text-muted">@Model.SkinColor</span>
                                     </div>
                                     <small class="text-muted d-block mt-2">
@@ -632,7 +628,7 @@
                                         <i class="bi bi-image me-2"></i>當前背景
                                     </label>
                                     <div class="d-flex align-items-center gap-2">
-                                        <div style="width: 40px; height: 40px; background-color: @Model.BackgroundColor; border-radius: 8px; border: 3px solid #ddd;"></div>
+                                        <div style="width: 80px; height: 60px; background-image: url('/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/@(Model.BackgroundColor).png'); background-size: cover; background-position: center; border-radius: 8px; border: 3px solid #ddd;"></div>
                                         <span class="text-muted">@Model.BackgroundColor</span>
                                     </div>
                                     <small class="text-muted d-block mt-2">
@@ -788,8 +784,8 @@
                     // 顯示成功消息
                     showResult(true, result.message, null);
 
-                    // 更新寵物狀態
-                    if (result.pet) {
+                    // 更新寵物狀態（檢查pet對象是否存在且有有效數據）
+                    if (result.pet && typeof result.pet.hunger === 'number') {
                         updatePetStats(result.pet);
 
                         // 更新寵物 SVG
@@ -802,6 +798,10 @@
                                 health: result.pet.health
                             });
                         }
+                    } else {
+                        // 如果後端沒有返回pet數據，重新加載頁面以獲取最新狀態
+                        console.log('Pet data not returned, reloading page...');
+                        setTimeout(() => window.location.reload(), 1000);
                     }
 
                 } else {

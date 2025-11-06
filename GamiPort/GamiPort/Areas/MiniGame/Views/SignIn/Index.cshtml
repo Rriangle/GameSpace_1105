@@ -126,6 +126,9 @@
 								<button type="button" class="btn btn-info" id="goToMonth" style="padding: 8px 16px;">
 									<i class="fas fa-arrow-right me-1"></i>前往
 								</button>
+								<button type="button" class="btn btn-success" id="backToCurrentMonth" style="padding: 8px 16px; margin-left: 8px;">
+									<i class="fas fa-home me-1"></i>回到本月
+								</button>
 							</div>
 
 							<a href="@Url.Action("Index", new { year = currentYear, month = currentMonth < 12 ? currentMonth + 1 : 1 })"
@@ -326,6 +329,17 @@
 						goToMonthBtn.click();
 					}
 				});
+			});
+		}
+
+		// 回到本月按鈕
+		const backToCurrentMonthBtn = document.getElementById('backToCurrentMonth');
+		if (backToCurrentMonthBtn) {
+			backToCurrentMonthBtn.addEventListener('click', function() {
+				const today = new Date();
+				const currentYear = today.getFullYear();
+				const currentMonth = today.getMonth() + 1;
+				window.location.href = '@Url.Action("Index")?year=' + currentYear + '&month=' + currentMonth;
 			});
 		}
 	});

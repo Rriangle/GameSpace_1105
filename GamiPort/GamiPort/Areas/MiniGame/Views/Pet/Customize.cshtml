@@ -309,8 +309,9 @@
             <!-- Preview Card -->
             <div class="preview-card" id="previewCard" style="background-image: url('@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")'); background-size: cover; background-position: center;">
                 <div class="preview-header">預覽</div>
-                <div class="preview-pet-avatar" style="background-color: @currentSkinColor; border-color: white;">
-                    <i class="bi bi-heart-fill text-white"></i>
+                <div class="preview-pet-avatar" style="border-color: white;">
+                    <!-- SVG Pet Avatar Container -->
+                    <div id="customizePetAvatarContainer" style="width: 100%; height: 100%;"></div>
                 </div>
                 <div class="preview-pet-name" id="previewPetName">@(Model?.PetName ?? "我的寵物")</div>
             </div>
@@ -388,7 +389,13 @@
         </div>
     </div>
 
+    <!-- Pet Avatar SVG Renderer -->
+    <script src="/MiniGame/js/pet-avatar.js"></script>
+
     <script>
+        // Pet Avatar Instance for Preview
+        let previewPetAvatar = null;
+
         // Load skin color options from server (all 11 colors from database)
         const skinColorOptions = [
             @foreach (var skin in skins)
@@ -477,8 +484,10 @@
             event.target.closest('.color-option').classList.add('selected');
             document.getElementById('skinColorCost').textContent = cost;
 
-            // Update preview pet avatar color (keep background image)
-            document.querySelector('.preview-pet-avatar').style.backgroundColor = color;
+            // Update preview pet avatar SVG with new skin color
+            if (previewPetAvatar) {
+                previewPetAvatar.updateSkinColor(color);
+            }
 
             document.getElementById('confirmSkinColor').disabled = false;
         }
@@ -504,8 +513,10 @@
             selectedSkinColor = '@currentSkinColor';
             initializeSkinColors();
 
-            // Restore preview pet avatar color (keep background image)
-            document.querySelector('.preview-pet-avatar').style.backgroundColor = selectedSkinColor;
+            // Restore preview pet avatar SVG to original skin color
+            if (previewPetAvatar) {
+                previewPetAvatar.updateSkinColor(selectedSkinColor);
+            }
 
             document.getElementById('confirmSkinColor').disabled = true;
         }
@@ -591,6 +602,19 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function () {
+            // Initialize Pet Avatar for Preview
+            const petData = {
+                hunger: @(Model?.Hunger ?? 50),
+                mood: @(Model?.Mood ?? 50),
+                stamina: @(Model?.Stamina ?? 50),
+                cleanliness: @(Model?.Cleanliness ?? 50),
+                health: @(Model?.Health ?? 50),
+                skinColor: '@currentSkinColor',
+                level: @(Model?.Level ?? 1)
+            };
+
+            previewPetAvatar = new PetAvatar('customizePetAvatarContainer', petData);
+
             initializeSkinColors();
             initializeBackgroundColors();
         });

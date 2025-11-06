@@ -620,7 +620,7 @@ namespace GamiPort.Areas.MiniGame.Services
 				var generatedCodes = new List<string>();
 				for (int i = 0; i < quantity; i++)
 				{
-					var couponCode = GenerateUniqueCouponCode();
+					var couponCode = await GenerateUniqueCouponCodeAsync();
 					var coupon = new Coupon
 					{
 						CouponCode = couponCode,
@@ -748,7 +748,7 @@ namespace GamiPort.Areas.MiniGame.Services
 				var generatedCodes = new List<string>();
 				for (int i = 0; i < quantity; i++)
 				{
-					var evoucherCode = GenerateUniqueEVoucherCode();
+					var evoucherCode = await GenerateUniqueEVoucherCodeAsync();
 					var evoucher = new Evoucher
 					{
 						EvoucherCode = evoucherCode,
@@ -838,27 +838,69 @@ namespace GamiPort.Areas.MiniGame.Services
 		}
 
 		/// <summary>
-		/// 生成唯一的優惠券代碼
-		/// 格式: CPN-YYYYMM-XXXXXX
+		/// 生成唯一的優惠券代碼 (GUID-based with retry mechanism)
+		/// 格式: CPN-YYYYMM-{GUID前8碼}
 		/// </summary>
-		private string GenerateUniqueCouponCode()
+		private async Task<string> GenerateUniqueCouponCodeAsync()
 		{
-			var now = DateTime.Now;
-			var yearMonth = now.ToString("yyyyMM");
-			var random = new Random().Next(100000, 999999);
-			return $"CPN-{yearMonth}-{random}";
+			int maxRetries = 10;
+			for (int i = 0; i < maxRetries; i++)
+			{
+				var now = _appClock.ToAppTime(_appClock.UtcNow);
+				var yearMonth = now.ToString("yyyyMM");
+				var uniqueId = Guid.NewGuid().ToString("N")[..8].ToUpper();
+				var code = $"CPN-{yearMonth}-{uniqueId}";
+
+				// Check if code already exists in database
+				bool exists = await _context.Coupons
+					.AsNoTracking()
+					.AnyAsync(c => c.CouponCode == code);
+
+				if (!exists)
+				{
+					return code;
+				}
+
+				_logger.LogWarning("優惠券代碼衝突，重試中: Code={Code}, Attempt={Attempt}", code, i + 1);
+			}
+
+			// Fallback: use full timestamp + GUID if all retries failed
+			var fallbackCode = $"CPN-{DateTime.Now:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..30];
+			_logger.LogError("優惠券代碼生成失敗，使用 Fallback: Code={Code}", fallbackCode);
+			return fallbackCode;
 		}
 
 		/// <summary>
-		/// 生成唯一的電子禮券代碼
-		/// 格式: EV-YYYYMM-XXXXXX
+		/// 生成唯一的電子禮券代碼 (GUID-based with retry mechanism)
+		/// 格式: EV-YYYYMM-{GUID前8碼}
 		/// </summary>
-		private string GenerateUniqueEVoucherCode()
+		private async Task<string> GenerateUniqueEVoucherCodeAsync()
 		{
-			var now = DateTime.Now;
-			var yearMonth = now.ToString("yyyyMM");
-			var random = new Random().Next(100000, 999999);
-			return $"EV-{yearMonth}-{random}";
+			int maxRetries = 10;
+			for (int i = 0; i < maxRetries; i++)
+			{
+				var now = _appClock.ToAppTime(_appClock.UtcNow);
+				var yearMonth = now.ToString("yyyyMM");
+				var uniqueId = Guid.NewGuid().ToString("N")[..8].ToUpper();
+				var code = $"EV-{yearMonth}-{uniqueId}";
+
+				// Check if code already exists in database
+				bool exists = await _context.Evouchers
+					.AsNoTracking()
+					.AnyAsync(e => e.EvoucherCode == code);
+
+				if (!exists)
+				{
+					return code;
+				}
+
+				_logger.LogWarning("電子禮券代碼衝突，重試中: Code={Code}, Attempt={Attempt}", code, i + 1);
+			}
+
+			// Fallback: use full timestamp + GUID if all retries failed
+			var fallbackCode = $"EV-{DateTime.Now:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..30];
+			_logger.LogError("電子禮券代碼生成失敗，使用 Fallback: Code={Code}", fallbackCode);
+			return fallbackCode;
 		}
 	}
 }
