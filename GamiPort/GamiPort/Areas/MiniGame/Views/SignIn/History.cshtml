@@ -59,9 +59,11 @@
 					<tbody>
 						@if (Model.History.Items.Any())
 						{
-							int rowNumber = (Model.History.CurrentPage - 1) * Model.History.PageSize + 1;
-							@foreach (var item in Model.History.Items)
+							var itemsList = Model.History.Items.ToList();
+							for (int i = 0; i < itemsList.Count; i++)
 							{
+								var item = itemsList[i];
+								var rowNumber = (Model.History.CurrentPage - 1) * Model.History.PageSize + i + 1;
 								<tr style="background-color: #ffffff; border-bottom: 1px solid #e0e0e0;">
 									<td>
 										<span class="badge badge-primary" style="background-color: #17a2b8;">@rowNumber</span>
@@ -80,7 +82,6 @@
 										}
 									</td>
 								</tr>
-								@(rowNumber++)
 							}
 						}
 						else

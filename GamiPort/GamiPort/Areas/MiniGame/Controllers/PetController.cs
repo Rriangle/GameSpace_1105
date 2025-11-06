@@ -55,6 +55,10 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				return View("Index");
 			}
 
+			// 重新計算下一級所需經驗值（確保顯示正確）
+			var expToNext = await _petService.GetRequiredExpForLevelAsync(pet.Level + 1);
+			pet.ExperienceToNextLevel = expToNext;
+
 			// 獲取錢包信息
 			var wallet = await _context.UserWallets
 				.AsNoTracking()
@@ -109,6 +113,10 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				ViewBag.ErrorMessage = "未找到寵物信息";
 				return View();
 			}
+
+			// 重新計算下一級所需經驗值（確保顯示正確）
+			var expToNext = await _petService.GetRequiredExpForLevelAsync(pet.Level + 1);
+			pet.ExperienceToNextLevel = expToNext;
 
 			// 獲取可用的膚色和背景（所有11種，包括限時活動限定已失效的）
 			var skins = await _petService.GetAvailableSkinsAsync();
