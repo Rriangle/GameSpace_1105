@@ -59,11 +59,12 @@
 					<tbody>
 						@if (Model.History.Items.Any())
 						{
+							int rowNumber = (Model.History.CurrentPage - 1) * Model.History.PageSize + 1;
 							@foreach (var item in Model.History.Items)
 							{
 								<tr style="background-color: #ffffff; border-bottom: 1px solid #e0e0e0;">
 									<td>
-										<span class="badge badge-primary" style="background-color: #17a2b8;">@item.LogId</span>
+										<span class="badge badge-primary" style="background-color: #17a2b8;">@rowNumber</span>
 									</td>
 									<td>@item.SignTime.ToUtc8String("yyyy-MM-dd HH:mm")</td>
 									<td><span style="color: #ff9f43; font-weight: bold;">+@item.PointsGained</span></td>
@@ -79,6 +80,7 @@
 										}
 									</td>
 								</tr>
+								@(rowNumber++)
 							}
 						}
 						else

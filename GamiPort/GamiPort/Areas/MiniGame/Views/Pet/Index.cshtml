@@ -808,7 +808,7 @@
                             </div>
                             <div class="compact-exp-bar-wrapper">
                                 <div class="compact-exp-bar" id="experience-bar"
-                                     style="width: @((Model.ExperienceToNextLevel > 0 ? (Model.Experience * 100.0 / Model.ExperienceToNextLevel.Value) : 0).ToString("F2"))%;">
+                                     style="width: @((Model.ExperienceToNextLevel > 0 ? Math.Min(100, (Model.Experience * 100.0 / Model.ExperienceToNextLevel.Value)) : 0).ToString("F2"))%;">
                                 </div>
                             </div>
                             <div class="compact-exp-text">
@@ -1127,7 +1127,7 @@
                 // 根據當前寵物數據創建 SVG 寵物
                 petAvatar = new PetAvatar('petAvatarContainer', {
                     skinColor: '@Model.SkinColor',
-                    backgroundColor: '@Model.BackgroundColor',
+                    backgroundColor: 'beige',
                     size: 180,
                     animated: true,
                     enableEyeTracking: true,
@@ -1354,7 +1354,7 @@
             const requiredExpDisplay = document.getElementById('required-exp-display');
 
             if (experienceBar && requiredExp > 0) {
-                const percentage = (currentExp * 100.0 / requiredExp);
+                const percentage = Math.min(100, (currentExp * 100.0 / requiredExp));
                 experienceBar.style.width = percentage.toFixed(2) + '%';
             }
 
