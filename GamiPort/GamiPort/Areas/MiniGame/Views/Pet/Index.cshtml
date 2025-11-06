@@ -1507,12 +1507,31 @@
 
             // Update stat changes - 不再顯示詳細變化，因為已經在message中顯示
             let changeHtml = '';
+            let displayDuration = 6000; // 預設顯示6秒
 
             // 如果是首次五值全滿，顯示特殊提示
             if (isFirstDailyFullStats && bonusExp > 0) {
-                changeHtml = `<div style="color: #ffa500; font-weight: bold; margin-top: 0.5rem; font-size: 1rem;">
-                    🎉 恭喜！今日首次達成五值全滿！
+                changeHtml = `<div style="background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+                                         color: #333;
+                                         font-weight: bold;
+                                         margin-top: 0.75rem;
+                                         padding: 1rem 1.5rem;
+                                         border-radius: 12px;
+                                         font-size: 1.3rem;
+                                         text-align: center;
+                                         box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+                                         border: 2px solid #ffd700;">
+                    <div style="margin-bottom: 0.5rem;">
+                        <i class="bi bi-trophy-fill" style="color: #ff6b6b; font-size: 1.8rem; margin-right: 0.5rem;"></i>
+                        <span style="font-size: 1.5rem;">恭喜！今日首次達成寵物狀態值全滿</span>
+                        <i class="bi bi-trophy-fill" style="color: #ff6b6b; font-size: 1.8rem; margin-left: 0.5rem;"></i>
+                    </div>
+                    <div style="margin-top: 0.75rem; font-size: 1.2rem; display: flex; justify-content: center; gap: 2rem;">
+                        <span><i class="bi bi-star-fill" style="color: #28a745; margin-right: 0.3rem;"></i>寵物經驗值 +${bonusExp}</span>
+                        <span><i class="bi bi-gem" style="color: #17a2b8; margin-right: 0.3rem;"></i>會員點數 +${bonusPoints}</span>
+                    </div>
                 </div>`;
+                displayDuration = 2000; // 首次五值全滿只顯示2秒
             }
 
             statChange.innerHTML = changeHtml;
@@ -1520,10 +1539,10 @@
             // Show result
             resultDiv.classList.add('show');
 
-            // Auto-hide after 6 seconds (延長顯示時間，因為消息更長)
+            // Auto-hide after specified duration
             setTimeout(() => {
                 resultDiv.classList.remove('show');
-            }, 6000);
+            }, displayDuration);
         }
 
         // 顯示升級通知
