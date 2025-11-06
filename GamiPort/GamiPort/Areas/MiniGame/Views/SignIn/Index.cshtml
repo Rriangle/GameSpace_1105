@@ -42,7 +42,8 @@
 					}
 					else
 					{
-						<form method="post" action="@Url.Action("CheckIn")">
+						<form method="post" action="@Url.Action("CheckIn", "SignIn", new { area = "MiniGame" })">
+							@Html.AntiForgeryToken()
 							<button type="submit" class="btn btn-warning w-100" style="font-weight: bold;">
 								<i class="fas fa-pencil-alt"></i> 立即簽到
 							</button>
