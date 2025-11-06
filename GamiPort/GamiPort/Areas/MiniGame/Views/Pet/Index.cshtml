@@ -7,6 +7,7 @@
 
 @if (User.Identity?.IsAuthenticated == true)
 {
+    @Html.AntiForgeryToken()
     <style>
         .pet-card {
             border-radius: 24px;
@@ -762,11 +763,17 @@
             button.classList.add('loading');
 
             try {
+                // 獲取 anti-forgery token
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
                 // 調用實際 API
                 const response = await fetch('/MiniGame/Pet/Interact', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `action=${encodeURIComponent(action)}`
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token || ''
+                    },
+                    body: `action=${encodeURIComponent(action)}&__RequestVerificationToken=${encodeURIComponent(token || '')}`
                 });
 
                 const result = await response.json();
