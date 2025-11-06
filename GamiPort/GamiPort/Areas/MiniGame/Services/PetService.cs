@@ -78,37 +78,48 @@ namespace GamiPort.Areas.MiniGame.Services
 			using var transaction = await _context.Database.BeginTransactionAsync();
 			try
 			{
-				// 根據互動類型修改寵物屬性
+				// 根據互動類型修改寵物屬性（鉗位到 0-100）
+				// 商業規則用詞：餵食/洗澡/哄睡/休息
 				var actionLower = action?.ToLower() ?? string.Empty;
 				switch (actionLower)
 				{
 					case "feed":
-						// 餵食：飢餓值增加10（最高100）
-						pet.Hunger = Math.Min(pet.Hunger + 10, 100);
+						// 餵食：飢餓值增加10
+						pet.Hunger = Math.Max(0, Math.Min(pet.Hunger + 10, 100));
 						break;
 					case "bath":
-						// 洗澡：清潔值增加10（最高100）
-						pet.Cleanliness = Math.Min(pet.Cleanliness + 10, 100);
+						// 洗澡：清潔值增加10
+						pet.Cleanliness = Math.Max(0, Math.Min(pet.Cleanliness + 10, 100));
 						break;
-					case "play":
-						// 玩耍：心情值增加10（最高100）
-						pet.Mood = Math.Min(pet.Mood + 10, 100);
+					case "comfort":
+					case "play": // 向後兼容，但建議使用 comfort
+						// 哄睡：心情值增加10
+						pet.Mood = Math.Max(0, Math.Min(pet.Mood + 10, 100));
 						break;
-					case "sleep":
-						// 睡覺：體力值增加10（最高100）
-						pet.Stamina = Math.Min(pet.Stamina + 10, 100);
+					case "rest":
+					case "sleep": // 向後兼容，但建議使用 rest
+						// 休息：體力值增加10
+						pet.Stamina = Math.Max(0, Math.Min(pet.Stamina + 10, 100));
 						break;
 					default:
 						await transaction.RollbackAsync();
 						return new PetInteractionResult
 						{
 							Success = false,
-							Message = "無效的互動類型"
+							Message = "無效的互動類型（有效值：feed/bath/comfort/rest）"
 						};
 				}
 
-				// 扣除會員點數
-				wallet.UserPoint -= INTERACT_POINT_COST;
+				// 商業規則：全滿回復
+				// 當飢餓、心情、體力、清潔四項值均達到 100 時，寵物健康值恢復至 100
+				if (pet.Hunger == 100 && pet.Mood == 100 &&
+					pet.Stamina == 100 && pet.Cleanliness == 100)
+				{
+					pet.Health = 100;
+				}
+
+				// 扣除會員點數（鉗位確保不為負）
+				wallet.UserPoint = Math.Max(0, wallet.UserPoint - INTERACT_POINT_COST);
 
 				// 保存更改
 				_context.Pets.Update(pet);

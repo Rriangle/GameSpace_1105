@@ -109,6 +109,21 @@ namespace GamiPort.Areas.MiniGame.Services
 					return (false, "用戶無寵物資料", null);
 				}
 
+				// 商業規則：冒險開始前檢查寵物狀態
+				// 若飢餓、心情、體力、清潔、健康任一屬性值為 0，則無法開始冒險
+				if (pet.Hunger == 0 || pet.Mood == 0 || pet.Stamina == 0 ||
+					pet.Cleanliness == 0 || pet.Health == 0)
+				{
+					var statusList = new List<string>();
+					if (pet.Hunger == 0) statusList.Add("飢餓");
+					if (pet.Mood == 0) statusList.Add("心情");
+					if (pet.Stamina == 0) statusList.Add("體力");
+					if (pet.Cleanliness == 0) statusList.Add("清潔");
+					if (pet.Health == 0) statusList.Add("健康");
+
+					return (false, $"寵物狀態不佳（{string.Join("、", statusList)}值為0），請先進行互動恢復寵物狀態", null);
+				}
+
 				// 建立遊戲記錄
 				var game = new Models.MiniGame
 				{
@@ -185,12 +200,15 @@ namespace GamiPort.Areas.MiniGame.Services
 				game.EndTime = _appClock.UtcNow;
 				game.Aborted = (result == "Abort");
 
+				// 獲取關卡對應的獎勵配置
+				var (rewardExp, rewardPoints, hasCoupon) = GetRewardsByLevel(level);
+
 				// 只有勝利才發放獎勵
 				if (result == "Win")
 				{
-					game.ExpGained = experience;
+					game.ExpGained = rewardExp;
 					game.ExpGainedTime = _appClock.UtcNow;
-					game.PointsGained = points;
+					game.PointsGained = rewardPoints;
 					game.PointsGainedTime = _appClock.UtcNow;
 
 					// 更新用戶錢包點數
@@ -199,7 +217,7 @@ namespace GamiPort.Areas.MiniGame.Services
 
 					if (wallet != null)
 					{
-						wallet.UserPoint += points;
+						wallet.UserPoint += rewardPoints;
 						wallet.IsDeleted = false; // 確保未軟刪除
 						_context.UserWallets.Update(wallet);
 					}
@@ -211,6 +229,26 @@ namespace GamiPort.Areas.MiniGame.Services
 				{
 					// 失敗或中止也會有屬性影響
 					ApplyGameResultToPetStats(game, false);
+				}
+
+				// 真正更新寵物的屬性值（應用 Delta）
+				var pet = await _context.Pets.FirstOrDefaultAsync(p => p.PetId == game.PetId && !p.IsDeleted);
+				if (pet != null)
+				{
+					// 應用變化並鉗位到 0-100
+					pet.Hunger = Math.Max(0, Math.Min(100, pet.Hunger + game.HungerDelta));
+					pet.Mood = Math.Max(0, Math.Min(100, pet.Mood + game.MoodDelta));
+					pet.Stamina = Math.Max(0, Math.Min(100, pet.Stamina + game.StaminaDelta));
+					pet.Cleanliness = Math.Max(0, Math.Min(100, pet.Cleanliness + game.CleanlinessDelta));
+
+					// 檢查全滿回復：當飢餓、心情、體力、清潔四項值均達到 100 時，寵物健康值恢復至 100
+					if (pet.Hunger == 100 && pet.Mood == 100 &&
+						pet.Stamina == 100 && pet.Cleanliness == 100)
+					{
+						pet.Health = 100;
+					}
+
+					_context.Pets.Update(pet);
 				}
 
 				_context.MiniGames.Update(game);
@@ -327,31 +365,52 @@ namespace GamiPort.Areas.MiniGame.Services
 
 		/// <summary>
 		/// 根據難度等級取得怪物數量
-		/// Level 1: 3, Level 2: 5, Level 3: 7
+		/// 第 1 關：6 隻怪物
+		/// 第 2 關：8 隻怪物
+		/// 第 3 關：10 隻怪物
 		/// </summary>
 		private int GetMonsterCountByLevel(int level)
 		{
 			return level switch
 			{
-				1 => 3,
-				2 => 5,
-				3 => 7,
-				_ => 3
+				1 => 6,
+				2 => 8,
+				3 => 10,
+				_ => 6
 			};
 		}
 
 		/// <summary>
 		/// 根據難度等級取得速度倍數
-		/// Level 1: 1.0, Level 2: 1.2, Level 3: 1.5
+		/// 第 1 關：1.0 倍速度
+		/// 第 2 關：1.5 倍速度
+		/// 第 3 關：2.0 倍速度
 		/// </summary>
 		private decimal GetSpeedMultiplierByLevel(int level)
 		{
 			return level switch
 			{
 				1 => 1.0m,
-				2 => 1.2m,
-				3 => 1.5m,
+				2 => 1.5m,
+				3 => 2.0m,
 				_ => 1.0m
+			};
+		}
+
+		/// <summary>
+		/// 根據關卡等級計算獎勵（經驗值和點數）
+		/// 第 1 關：+100 經驗值，+10 點數
+		/// 第 2 關：+200 經驗值，+20 點數
+		/// 第 3 關：+300 經驗值，+30 點數，+1 張商城優惠券
+		/// </summary>
+		private (int experience, int points, bool hasCoupon) GetRewardsByLevel(int level)
+		{
+			return level switch
+			{
+				1 => (100, 10, false),
+				2 => (200, 20, false),
+				3 => (300, 30, true),
+				_ => (100, 10, false)
 			};
 		}
 
