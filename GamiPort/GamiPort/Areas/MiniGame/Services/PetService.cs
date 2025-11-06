@@ -61,18 +61,9 @@ namespace GamiPort.Areas.MiniGame.Services
 				};
 			}
 
-			// 檢查用戶錢包是否有足夠點數
+			// 獲取用戶錢包（用於全滿獎勵發放）
 			var wallet = await _context.UserWallets
 				.FirstOrDefaultAsync(w => w.UserId == userId && !w.IsDeleted);
-
-			if (wallet == null || wallet.UserPoint < INTERACT_POINT_COST)
-			{
-				return new PetInteractionResult
-				{
-					Success = false,
-					Message = "會員點數不足，無法進行互動"
-				};
-			}
 
 			// 開啟事務
 			using var transaction = await _context.Database.BeginTransactionAsync();
@@ -190,19 +181,20 @@ namespace GamiPort.Areas.MiniGame.Services
 					}
 				}
 
-				// 扣除會員點數（鉗位確保不為負）
-				wallet.UserPoint = Math.Max(0, wallet.UserPoint - INTERACT_POINT_COST);
 
 				// 保存更改
 				_context.Pets.Update(pet);
-				_context.UserWallets.Update(wallet);
+				if (wallet != null)
+				{
+					_context.UserWallets.Update(wallet);
+				}
 				await _context.SaveChangesAsync();
 				await transaction.CommitAsync();
 
 				return new PetInteractionResult
 				{
 					Success = true,
-					Message = $"互動成功！消耗{INTERACT_POINT_COST}點點數{bonusMessage}",
+					Message = $"互動成功！{bonusMessage}",
 					Pet = pet
 				};
 			}
