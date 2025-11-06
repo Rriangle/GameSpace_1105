@@ -591,32 +591,27 @@
             // 立即更新預覽卡的背景圖片
             const previewCard = document.getElementById('previewCard');
 
-            // 確保路徑正確並編碼中文字符
+            // 確保路徑正確
             let imagePath = image;
             if (!imagePath.startsWith('/')) {
                 imagePath = '/' + imagePath;
             }
 
-            // 編碼路徑中的中文字符
-            const pathParts = imagePath.split('/');
-            const encodedPath = pathParts.map((part, index) => {
-                // 不編碼最開始的空字符串（從 '/' 分割產生）
-                if (index === 0) return part;
-                // 編碼其他部分（處理中文）
-                return encodeURIComponent(part);
-            }).join('/');
+            console.log('Setting background image:', imagePath);
+            console.log('Preview card element:', previewCard);
 
-            console.log('Original path:', imagePath);
-            console.log('Encoded path:', encodedPath);
+            // 直接設置背景圖（不使用編碼，直接使用原始路徑）
+            previewCard.style.setProperty('background-image', `url('${imagePath}')`, 'important');
+            previewCard.style.setProperty('background-size', 'cover', 'important');
+            previewCard.style.setProperty('background-position', 'center', 'important');
+            previewCard.style.setProperty('background-repeat', 'no-repeat', 'important');
 
-            // 設置背景圖（先清除再設置，確保更新）
-            previewCard.style.backgroundImage = 'none';
-            setTimeout(() => {
-                previewCard.style.backgroundImage = `url("${encodedPath}")`;
-                previewCard.style.backgroundSize = 'cover';
-                previewCard.style.backgroundPosition = 'center';
-                previewCard.style.backgroundRepeat = 'no-repeat';
-            }, 10);
+            // 調試：輸出當前樣式
+            console.log('Applied styles:', {
+                backgroundImage: previewCard.style.backgroundImage,
+                backgroundSize: previewCard.style.backgroundSize,
+                backgroundPosition: previewCard.style.backgroundPosition
+            });
 
             // Update button text based on ownership
             const confirmBtn = document.getElementById('confirmBackgroundColor');
@@ -673,17 +668,13 @@
                 imagePath = '/' + imagePath;
             }
 
-            // 編碼路徑中的中文字符
-            const pathParts = imagePath.split('/');
-            const encodedPath = pathParts.map((part, index) => {
-                if (index === 0) return part;
-                return encodeURIComponent(part);
-            }).join('/');
+            console.log('Resetting to:', imagePath);
 
-            previewCard.style.backgroundImage = `url("${encodedPath}")`;
-            previewCard.style.backgroundSize = 'cover';
-            previewCard.style.backgroundPosition = 'center';
-            previewCard.style.backgroundRepeat = 'no-repeat';
+            // 直接設置背景圖
+            previewCard.style.setProperty('background-image', `url('${imagePath}')`, 'important');
+            previewCard.style.setProperty('background-size', 'cover', 'important');
+            previewCard.style.setProperty('background-position', 'center', 'important');
+            previewCard.style.setProperty('background-repeat', 'no-repeat', 'important');
 
             // 重新初始化選項以更新選中狀態
             initializeBackgroundColors();
