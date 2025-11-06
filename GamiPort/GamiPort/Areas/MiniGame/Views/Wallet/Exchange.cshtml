@@ -242,15 +242,32 @@
 					return;
 				}
 				const token = tokenInput.value;
+				const requestBody = `couponTypeId=${couponId}&quantity=${quantity}&__RequestVerificationToken=${encodeURIComponent(token)}`;
+				console.log('📤 發送請求:', {
+					url: '@Url.Action("ExchangeForCoupon", "Wallet")',
+					method: 'POST',
+					couponId: couponId,
+					quantity: quantity,
+					bodyLength: requestBody.length
+				});
+
 				fetch('@Url.Action("ExchangeForCoupon", "Wallet")', {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/x-www-form-urlencoded'
 					},
-					body: `couponTypeId=${couponId}&quantity=${quantity}&__RequestVerificationToken=${encodeURIComponent(token)}`
+					body: requestBody
 				})
-				.then(response => response.json())
+				.then(response => {
+					console.log('📥 收到響應:', {
+						status: response.status,
+						statusText: response.statusText,
+						ok: response.ok
+					});
+					return response.json();
+				})
 				.then(data => {
+					console.log('📋 響應數據:', data);
 					if (data.success) {
 						// 更新點數顯示
 						userPoints -= totalCost;
@@ -259,11 +276,12 @@
 						// 顯示成功訊息
 						showSuccessModal('兌換成功', data.message, data.couponCodes, 'coupon');
 					} else {
+						console.error('❌ 兌換失敗:', data.message);
 						showErrorModal('兌換失敗', data.message);
 					}
 				})
 				.catch(error => {
-					console.error('Error:', error);
+					console.error('❌ 請求錯誤:', error);
 					showErrorModal('系統錯誤', '兌換過程發生錯誤，請稍後再試');
 				})
 				.finally(() => {

@@ -594,6 +594,9 @@ namespace GamiPort.Areas.MiniGame.Services
 			int couponTypeId,
 			int quantity = 1)
 		{
+			_logger.LogInformation("開始兌換優惠券: UserId={UserId}, CouponTypeId={CouponTypeId}, Quantity={Quantity}",
+				userId, couponTypeId, quantity);
+
 			using var transaction = await _context.Database.BeginTransactionAsync();
 			try
 			{
@@ -647,24 +650,33 @@ namespace GamiPort.Areas.MiniGame.Services
 				// 7. 扣除點數
 				wallet.UserPoint -= totalPointsRequired;
 
-				// 8. 生成優惠券
+				// 8. 生成優惠券（使用原生SQL繞過DEFAULT約束）
 				var generatedCodes = new List<string>();
 				for (int i = 0; i < quantity; i++)
 				{
 					var couponCode = await GenerateUniqueCouponCodeAsync();
-					var coupon = new Coupon
-					{
-						CouponCode = couponCode,
-						CouponTypeId = couponTypeId,
-						UserId = userId,
-						IsUsed = false,
-						AcquiredTime = nowUtc8,
-						UsedTime = null,
-						UsedInOrderId = null,
-						IsDeleted = false
-					};
-					_context.Coupons.Add(coupon);
+					_logger.LogDebug("生成優惠券代碼: {CouponCode}, Iteration={Iteration}", couponCode, i + 1);
+
+					// 使用原生SQL直接插入，完全控制NULL值
+					var sql = @"
+						INSERT INTO [Coupon]
+						([CouponCode], [CouponTypeId], [UserId], [IsUsed], [AcquiredTime], [UsedTime], [UsedInOrderId], [IsDeleted])
+						VALUES
+						({0}, {1}, {2}, {3}, {4}, NULL, NULL, {5})";
+
+					await _context.Database.ExecuteSqlRawAsync(
+						sql,
+						couponCode,
+						couponTypeId,
+						userId,
+						false,  // IsUsed
+						nowUtc8,
+						false   // IsDeleted
+					);
+
 					generatedCodes.Add(couponCode);
+
+					_logger.LogDebug("優惠券插入成功: CouponCode={CouponCode}, 使用原生SQL繞過DEFAULT約束", couponCode);
 				}
 
 				// 9. 記錄錢包歷史
@@ -690,12 +702,34 @@ namespace GamiPort.Areas.MiniGame.Services
 
 				return (true, $"成功兌換 {quantity} 張優惠券「{couponType.Name}」", generatedCodes);
 			}
+			catch (DbUpdateException dbEx)
+			{
+				await transaction.RollbackAsync();
+				_logger.LogError(dbEx, "資料庫更新失敗: UserId={UserId}, CouponTypeId={CouponTypeId}, InnerException={InnerException}",
+					userId, couponTypeId, dbEx.InnerException?.Message ?? "無");
+
+				// 檢查是否為唯一性約束違反
+				if (dbEx.InnerException?.Message?.Contains("UNIQUE") == true ||
+				    dbEx.InnerException?.Message?.Contains("duplicate") == true)
+				{
+					return (false, "優惠券代碼生成衝突，請重試", new List<string>());
+				}
+
+				// 檢查是否為CHECK約束違反
+				if (dbEx.InnerException?.Message?.Contains("CHECK") == true ||
+				    dbEx.InnerException?.Message?.Contains("CK_") == true)
+				{
+					return (false, "資料驗證失敗，請聯繫客服", new List<string>());
+				}
+
+				return (false, $"兌換失敗：{dbEx.InnerException?.Message ?? dbEx.Message}", new List<string>());
+			}
 			catch (Exception ex)
 			{
 				await transaction.RollbackAsync();
-				_logger.LogError(ex, "兌換優惠券失敗: UserId={UserId}, CouponTypeId={CouponTypeId}",
-					userId, couponTypeId);
-				return (false, "兌換失敗，請稍後再試", new List<string>());
+				_logger.LogError(ex, "兌換優惠券失敗: UserId={UserId}, CouponTypeId={CouponTypeId}, ExceptionType={ExceptionType}",
+					userId, couponTypeId, ex.GetType().Name);
+				return (false, $"兌換失敗：{ex.Message}", new List<string>());
 			}
 		}
 
