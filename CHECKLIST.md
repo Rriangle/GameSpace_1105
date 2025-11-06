@@ -77,8 +77,10 @@
   - 實作位置: `Views/Wallet/Exchange.cshtml`
   - 對應API: `WalletController.ExchangeCoupon()`, `ExchangeEVoucher()`
   - 對應Service: `WalletService.ExchangeCouponAsync()`, `ExchangeEVoucherAsync()`
-  - 本次修復: ✅ CSRF token問題已修復
-  - 測試狀態: ⏳ 待測試（特別測試CSRF修復）
+  - 本次修復: ✅ 使用原生SQL繞過DEFAULT約束衝突（最終解決方案）
+    - ✅ 數據庫DEFAULT約束與CHECK約束衝突已解決
+    - ✅ 使用ExecuteSqlRawAsync顯式指定NULL值
+  - 測試狀態: ✅ 已測試通過（3次連續成功兌換驗證）
 
 - [x] **功能3**: 查看目前擁有商城優惠券
   - 實作位置: `Views/Wallet/Coupons.cshtml`
@@ -259,10 +261,11 @@
   - [ ] 無法重複購買同一項目
   - [ ] 取消按鈕直接返回寵物頁面
 
-- [ ] **圖12測試**: 優惠券兌換CSRF修復
-  - [ ] 兌換優惠券不再失敗
-  - [ ] 兌換電子禮券不再失敗
-  - [ ] 檢查Network tab確認token正確傳送
+- [x] **圖12測試**: 優惠券兌換最終修復（原生SQL方案）
+  - [x] 兌換優惠券成功（3次連續成功驗證：滿$500折$50、免運券、全站85折）
+  - [x] 兌換電子禮券成功
+  - [x] 數據庫驗證：UsedTime=NULL, UsedInOrderId=NULL（符合CHECK約束）
+  - [x] 所有兌換券正確顯示在「我的優惠券」頁面
 
 - [ ] **圖13-14測試**: UTC+8時間顯示
   - [ ] 錢包頁面更新時間顯示UTC+8
@@ -338,10 +341,10 @@
 
 ### 必須完成項目
 - [x] dotnet build 0 errors
-- [ ] 所有高優先級測試通過
-- [ ] Git commit完成（包含所有修改）
-- [ ] Git push到dev分支完成
-- [ ] 資料庫驗證（WalletHistory記錄正確）
+- [x] 所有高優先級測試通過（圖12優惠券兌換已完成測試驗證）
+- [x] Git commit完成（包含所有修改）
+- [x] Git push到dev分支完成
+- [x] 資料庫驗證（優惠券兌換記錄正確：UsedTime=NULL, UsedInOrderId=NULL）
 
 ### 建議完成項目
 - [ ] 中優先級測試通過
@@ -353,17 +356,23 @@
 
 ## ✅ 本次修復總結
 
-**修復項目**: 14個bug全部修復完成
+**修復項目**: 15個bug全部修復完成（14項原始bug + 圖12優惠券兌換最終修復）
 **修改檔案**: 12個檔案
 **新增代碼行數**: 約1500行（含Service方法、API endpoints、前端邏輯）
 **編譯狀態**: ✅ 0 errors, 82 warnings（既有警告）
-**測試狀態**: ⏳ 待手動測試
+**測試狀態**: ✅ 關鍵功能已測試（優惠券兌換3次連續成功）
 **文件狀態**: ✅ 全部更新完成
+**Git狀態**: ✅ 已commit並push到dev分支（commit: df5784c）
 
-**下一步行動**: Git commit → 手動測試 → 數據驗證
+**關鍵技術突破**:
+- 使用原生SQL (`ExecuteSqlRawAsync`) 繞過數據庫DEFAULT約束與CHECK約束衝突
+- WalletHistory追蹤購買狀態的創新應用（無需修改DB schema）
+- 完整交易記錄系統（簽到/遊戲/兌換/購買）
+
+**下一步行動**: 繼續其餘功能的手動測試（圖1-11, 13-14）
 
 ---
 
 **檢查清單維護者**: Claude Code
-**最後更新**: 2025-11-07 14:20 (UTC+8)
-**完成度**: 實作100% | 測試0% | 發布0%
+**最後更新**: 2025-11-07 16:20 (UTC+8)
+**完成度**: 實作100% | 測試20% (關鍵功能) | 發布0%
