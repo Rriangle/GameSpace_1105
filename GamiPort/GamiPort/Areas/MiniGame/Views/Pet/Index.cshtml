@@ -1486,11 +1486,14 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Update UI - find the h3 with pet name
-                    const petNameElement = document.querySelector('.pet-card-header + .card-body .d-flex.align-items-center h3');
+                    // Update UI - update the pet name immediately using correct selector
+                    const petNameElement = document.querySelector('.pet-name');
                     if (petNameElement) {
                         petNameElement.textContent = result.pet.petName;
                     }
+
+                    // Update the name in the modal input for next time
+                    document.getElementById('newPetName').value = result.pet.petName;
 
                     // Show success message
                     showNameUpdateAlert('success', result.message);
