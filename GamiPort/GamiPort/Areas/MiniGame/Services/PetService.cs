@@ -68,7 +68,7 @@ namespace GamiPort.Areas.MiniGame.Services
 				return new PetInteractionResult
 				{
 					Success = false,
-					Message = $"{pet.PetName}已經是健康寶寶了，不需要再和他互動了喔！",
+					Message = $"{pet.PetName}已經是健康寶寶了，是時候讓他獨立了🙃！",
 					Pet = pet
 				};
 			}

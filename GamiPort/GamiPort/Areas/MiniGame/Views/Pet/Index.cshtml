@@ -1187,6 +1187,7 @@
         };
 
         const interactionCooldowns = {};
+        let isShowingFullStatsReward = false; // 是否正在顯示五值全滿慶祝訊息（固定5秒）
 
         async function interactWithPet(action, button) {
             // Disable button and show loading
@@ -1486,6 +1487,11 @@
         }
 
         function showResult(success, message, statChanges, isFirstDailyFullStats, bonusExp, bonusPoints) {
+            // 如果正在顯示五值全滿慶祝訊息，則忽略此次顯示請求
+            if (isShowingFullStatsReward && !isFirstDailyFullStats) {
+                return;
+            }
+
             const resultDiv = document.getElementById('interactionResult');
             const resultText = document.getElementById('resultText');
             const statChange = document.getElementById('statChange');
@@ -1531,7 +1537,8 @@
                         <span><i class="bi bi-gem" style="color: #17a2b8; margin-right: 0.3rem;"></i>會員點數 +${bonusPoints}</span>
                     </div>
                 </div>`;
-                displayDuration = 2000; // 首次五值全滿只顯示2秒
+                displayDuration = 5000; // 首次五值全滿固定顯示5秒
+                isShowingFullStatsReward = true; // 設置flag
             }
 
             statChange.innerHTML = changeHtml;
@@ -1542,6 +1549,9 @@
             // Auto-hide after specified duration
             setTimeout(() => {
                 resultDiv.classList.remove('show');
+                if (isFirstDailyFullStats && bonusExp > 0) {
+                    isShowingFullStatsReward = false; // 重置flag
+                }
             }, displayDuration);
         }
 
