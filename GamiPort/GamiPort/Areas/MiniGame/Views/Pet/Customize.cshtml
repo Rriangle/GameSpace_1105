@@ -125,7 +125,7 @@
         }
 
         .preview-card {
-            background: #ffffff;
+            background-color: #ffffff;
             border-radius: 20px;
             padding: 2rem;
             text-align: center;
@@ -590,19 +590,33 @@
 
             // 立即更新預覽卡的背景圖片
             const previewCard = document.getElementById('previewCard');
-            console.log('Updating background to:', image);
 
-            // 確保路徑正確
+            // 確保路徑正確並編碼中文字符
             let imagePath = image;
             if (!imagePath.startsWith('/')) {
                 imagePath = '/' + imagePath;
             }
 
-            // 強制更新背景圖
-            previewCard.style.backgroundImage = `url('${imagePath}')`;
-            previewCard.style.backgroundSize = 'cover';
-            previewCard.style.backgroundPosition = 'center';
-            previewCard.style.backgroundRepeat = 'no-repeat';
+            // 編碼路徑中的中文字符
+            const pathParts = imagePath.split('/');
+            const encodedPath = pathParts.map((part, index) => {
+                // 不編碼最開始的空字符串（從 '/' 分割產生）
+                if (index === 0) return part;
+                // 編碼其他部分（處理中文）
+                return encodeURIComponent(part);
+            }).join('/');
+
+            console.log('Original path:', imagePath);
+            console.log('Encoded path:', encodedPath);
+
+            // 設置背景圖（先清除再設置，確保更新）
+            previewCard.style.backgroundImage = 'none';
+            setTimeout(() => {
+                previewCard.style.backgroundImage = `url("${encodedPath}")`;
+                previewCard.style.backgroundSize = 'cover';
+                previewCard.style.backgroundPosition = 'center';
+                previewCard.style.backgroundRepeat = 'no-repeat';
+            }, 10);
 
             // Update button text based on ownership
             const confirmBtn = document.getElementById('confirmBackgroundColor');
@@ -658,7 +672,15 @@
             if (!imagePath.startsWith('/')) {
                 imagePath = '/' + imagePath;
             }
-            previewCard.style.backgroundImage = `url('${imagePath}')`;
+
+            // 編碼路徑中的中文字符
+            const pathParts = imagePath.split('/');
+            const encodedPath = pathParts.map((part, index) => {
+                if (index === 0) return part;
+                return encodeURIComponent(part);
+            }).join('/');
+
+            previewCard.style.backgroundImage = `url("${encodedPath}")`;
             previewCard.style.backgroundSize = 'cover';
             previewCard.style.backgroundPosition = 'center';
             previewCard.style.backgroundRepeat = 'no-repeat';
