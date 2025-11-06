@@ -429,9 +429,15 @@
                                             <div class="progress">
                                                 <div class="progress-bar @(Model.Hunger < 20 ? "bg-danger" : Model.Hunger < 50 ? "bg-warning" : "bg-success")"
                                                      role="progressbar"
-                                                     style="width: @Model.Hunger%">
+                                                     style="width: @Model.Hunger%"
+                                                     id="hunger-bar">
                                                     @Model.Hunger%
                                                 </div>
+                                            </div>
+                                            <div class="text-center mt-1">
+                                                <small class="stat-description" id="hunger-status">
+                                                    @(Model.Hunger < 20 ? "飢餓" : "飽食")
+                                                </small>
                                             </div>
                                         </div>
                                     </div>
@@ -445,9 +451,15 @@
                                             <div class="progress">
                                                 <div class="progress-bar @(Model.Mood < 20 ? "bg-danger" : Model.Mood < 50 ? "bg-warning" : "bg-success")"
                                                      role="progressbar"
-                                                     style="width: @Model.Mood%">
+                                                     style="width: @Model.Mood%"
+                                                     id="mood-bar">
                                                     @Model.Mood%
                                                 </div>
+                                            </div>
+                                            <div class="text-center mt-1">
+                                                <small class="stat-description" id="mood-status">
+                                                    @(Model.Mood < 20 ? "難過" : "開心")
+                                                </small>
                                             </div>
                                         </div>
                                     </div>
@@ -461,9 +473,15 @@
                                             <div class="progress">
                                                 <div class="progress-bar @(Model.Stamina < 20 ? "bg-danger" : Model.Stamina < 50 ? "bg-warning" : "bg-success")"
                                                      role="progressbar"
-                                                     style="width: @Model.Stamina%">
+                                                     style="width: @Model.Stamina%"
+                                                     id="stamina-bar">
                                                     @Model.Stamina%
                                                 </div>
+                                            </div>
+                                            <div class="text-center mt-1">
+                                                <small class="stat-description" id="stamina-status">
+                                                    @(Model.Stamina < 20 ? "很累" : "充分休息")
+                                                </small>
                                             </div>
                                         </div>
                                     </div>
@@ -477,9 +495,15 @@
                                             <div class="progress">
                                                 <div class="progress-bar @(Model.Cleanliness < 20 ? "bg-danger" : Model.Cleanliness < 50 ? "bg-warning" : "bg-success")"
                                                      role="progressbar"
-                                                     style="width: @Model.Cleanliness%">
+                                                     style="width: @Model.Cleanliness%"
+                                                     id="cleanliness-bar">
                                                     @Model.Cleanliness%
                                                 </div>
+                                            </div>
+                                            <div class="text-center mt-1">
+                                                <small class="stat-description" id="cleanliness-status">
+                                                    @(Model.Cleanliness < 20 ? "身體很臭" : "身體乾淨")
+                                                </small>
                                             </div>
                                         </div>
                                     </div>
@@ -493,9 +517,15 @@
                                             <div class="progress">
                                                 <div class="progress-bar @(Model.Health < 20 ? "bg-danger" : Model.Health < 50 ? "bg-warning" : "bg-success")"
                                                      role="progressbar"
-                                                     style="width: @Model.Health%">
+                                                     style="width: @Model.Health%"
+                                                     id="health-bar">
                                                     @Model.Health%
                                                 </div>
+                                            </div>
+                                            <div class="text-center mt-1">
+                                                <small class="stat-description" id="health-status">
+                                                    @(Model.Health < 20 ? "生病" : "很健康")
+                                                </small>
                                             </div>
                                         </div>
                                     </div>
@@ -792,6 +822,13 @@
             updateProgressBar('Cleanliness', pet.cleanliness);
             updateProgressBar('Health', pet.health);
 
+            // 更新狀態描述
+            updateStatusDescription('hunger', pet.hunger);
+            updateStatusDescription('mood', pet.mood);
+            updateStatusDescription('stamina', pet.stamina);
+            updateStatusDescription('cleanliness', pet.cleanliness);
+            updateStatusDescription('health', pet.health);
+
             // 更新健康狀態文字
             if (pet.healthStatus) {
                 const healthStatusElement = document.querySelector('.pet-health-status');
@@ -799,6 +836,34 @@
                     healthStatusElement.textContent = pet.healthStatus;
                 }
             }
+        }
+
+        // 更新狀態描述
+        function updateStatusDescription(attrName, attrValue) {
+            const statusElement = document.getElementById(`${attrName}-status`);
+            if (!statusElement) return;
+
+            const description = getStatusDescription(attrName, attrValue);
+            statusElement.textContent = description;
+        }
+
+        // 獲取狀態描述文字
+        // 商業規則：屬性值 < 20 顯示負面狀態，否則顯示正面狀態
+        function getStatusDescription(attrName, attrValue) {
+            const statusMap = {
+                hunger: { low: '飢餓', high: '飽食' },
+                mood: { low: '難過', high: '開心' },
+                stamina: { low: '很累', high: '充分休息' },
+                cleanliness: { low: '身體很臭', high: '身體乾淨' },
+                health: { low: '生病', high: '很健康' }
+            };
+
+            const threshold = 20;
+            const status = statusMap[attrName];
+
+            if (!status) return '';
+
+            return attrValue < threshold ? status.low : status.high;
         }
 
         // 更新進度條

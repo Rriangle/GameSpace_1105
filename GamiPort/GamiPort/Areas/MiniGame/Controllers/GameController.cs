@@ -99,9 +99,10 @@ namespace GamiPort.Areas.MiniGame.Controllers
 
 		/// <summary>
 		/// 開始遊戲 - 實際啟動遊戲並扣除次數
+		/// 自動根據難度進程機制決定關卡等級
 		/// </summary>
 		[HttpPost]
-		public async Task<IActionResult> StartGame(int level)
+		public async Task<IActionResult> StartGame()
 		{
 			if (User.Identity?.IsAuthenticated != true)
 			{
@@ -122,27 +123,21 @@ namespace GamiPort.Areas.MiniGame.Controllers
 					return RedirectToAction("Index");
 				}
 
-				// 驗證難度等級
-				if (level < 1 || level > 3)
-				{
-					TempData["ErrorMessage"] = "無效的難度等級";
-					return RedirectToAction("Index");
-				}
-
-				// 啟動遊戲（扣除遊戲次數，創建遊戲記錄）
-				var (success, message, playId) = await _gamePlayService.StartGameAsync(userId, level);
+				// 啟動遊戲（自動計算關卡、扣除遊戲次數、創建遊戲記錄）
+				var (success, message, playId, level) = await _gamePlayService.StartGameAsync(userId);
 
 				if (success)
 				{
-					// 儲存遊戲 ID 到 TempData 供遊戲結束時使用
+					// 儲存遊戲 ID 和關卡到 TempData 供遊戲結束時使用
 					TempData["CurrentPlayId"] = playId;
+					TempData["CurrentLevel"] = level;
 					TempData["SuccessMessage"] = message;
 					return RedirectToAction("Index", new { selectedLevel = level });
 				}
 				else
 				{
 					TempData["ErrorMessage"] = message;
-					return RedirectToAction("Index", new { selectedLevel = level });
+					return RedirectToAction("Index");
 				}
 			}
 			catch (Exception ex)

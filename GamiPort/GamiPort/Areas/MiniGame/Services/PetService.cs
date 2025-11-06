@@ -112,10 +112,82 @@ namespace GamiPort.Areas.MiniGame.Services
 
 				// 商業規則：全滿回復
 				// 當飢餓、心情、體力、清潔四項值均達到 100 時，寵物健康值恢復至 100
+				string bonusMessage = "";
 				if (pet.Hunger == 100 && pet.Mood == 100 &&
 					pet.Stamina == 100 && pet.Cleanliness == 100)
 				{
 					pet.Health = 100;
+
+					// 商業規則：每日狀態全滿獎勵
+					// 寵物若於每日首次同時達到飢餓、心情、體力、清潔值皆 100，則額外獲得 100 點寵物經驗值
+					var today = _appClock.ToAppTime(_appClock.UtcNow).Date; // UTC+8
+					var todayItemCode = $"PET-FULLSTATS-{today:yyyy-MM-dd}";
+
+					// 檢查今日是否已發放全滿獎勵
+					var alreadyGrantedToday = await _context.WalletHistories
+						.AnyAsync(w => w.UserId == userId
+									&& w.ItemCode == todayItemCode
+									&& !w.IsDeleted);
+
+					if (!alreadyGrantedToday)
+					{
+						// 讀取獎勵配置（預設 100 經驗值、0 點數）
+						int bonusExp = 100; // 商業規則：每日狀態全滿獎勵 +100 經驗值
+						int bonusPoints = 0;
+
+						// 發放寵物經驗值
+						pet.Experience += bonusExp;
+
+						// 檢查升級（內嵌升級邏輯，避免重複事務）
+						var requiredExp = await GetRequiredExpForLevelAsync(pet.Level + 1);
+						while (pet.Experience >= requiredExp && requiredExp > 0)
+						{
+							// 執行升級
+							pet.Level++;
+							pet.LevelUpTime = _appClock.UtcNow;
+							pet.Experience -= requiredExp; // 保留溢出經驗值
+
+							// 計算升級獎勵
+							var pointsReward = CalculateLevelUpReward(pet.Level);
+							wallet.UserPoint += pointsReward;
+
+							// 記錄升級獎勵到錢包歷史
+							_context.WalletHistories.Add(new WalletHistory
+							{
+								UserId = userId,
+								ChangeType = "Pet",
+								PointsChanged = pointsReward,
+								ItemCode = $"PET_LEVELUP_{pet.Level}",
+								Description = $"寵物升級至 Level {pet.Level}",
+								ChangeTime = _appClock.UtcNow,
+								IsDeleted = false
+							});
+
+							// 檢查下一級
+							requiredExp = await GetRequiredExpForLevelAsync(pet.Level + 1);
+						}
+
+						// 發放會員點數（如果有配置）
+						if (bonusPoints > 0)
+						{
+							wallet.UserPoint += bonusPoints;
+						}
+
+						// 記錄到 WalletHistory（用於防重複發放全滿獎勵）
+						var historyRecord = new WalletHistory
+						{
+							UserId = userId,
+							ChangeType = "Point",
+							PointsChanged = bonusPoints,
+							ItemCode = todayItemCode,
+							Description = $"寵物狀態全滿獎勵（經驗值+{bonusExp}）",
+							ChangeTime = _appClock.UtcNow,
+							IsDeleted = false
+						};
+						_context.WalletHistories.Add(historyRecord);
+
+						bonusMessage = $" | 🎉 首次達成今日狀態全滿！獲得額外 {bonusExp} 經驗值！";
+					}
 				}
 
 				// 扣除會員點數（鉗位確保不為負）
@@ -130,7 +202,7 @@ namespace GamiPort.Areas.MiniGame.Services
 				return new PetInteractionResult
 				{
 					Success = true,
-					Message = $"互動成功！消耗{INTERACT_POINT_COST}點點數",
+					Message = $"互動成功！消耗{INTERACT_POINT_COST}點點數{bonusMessage}",
 					Pet = pet
 				};
 			}

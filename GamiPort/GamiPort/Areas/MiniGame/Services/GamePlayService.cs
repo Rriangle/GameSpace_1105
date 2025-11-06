@@ -69,18 +69,63 @@ namespace GamiPort.Areas.MiniGame.Services
 		}
 
 		/// <summary>
-		/// 開始遊戲
-		/// 檢查剩餘次數、建立遊戲記錄
+		/// 獲取用戶下一次應挑戰的關卡等級
+		/// 規則：首次從第 1 關開始，勝利提升至下一關，失敗保持當前關卡，最高第 3 關
 		/// </summary>
-		public async Task<(bool success, string message, int? playId)> StartGameAsync(int userId, int level)
+		private async Task<int> GetUserNextGameLevelAsync(int userId)
 		{
 			try
 			{
-				// 驗證難度等級
-				if (level < 1 || level > 3)
+				// 查詢該用戶最後一場完成的遊戲（非中止）
+				var lastGame = await _context.MiniGames
+					.AsNoTracking()
+					.Where(g => g.UserId == userId
+							 && g.EndTime != null  // 已完成
+							 && g.Result != null   // 有結果
+							 && !g.Aborted         // 非中止
+							 && !g.IsDeleted)      // 未刪除
+					.OrderByDescending(g => g.EndTime)
+					.FirstOrDefaultAsync();
+
+				if (lastGame == null)
 				{
-					return (false, "無效的難度等級 (必須 1-3)", null);
+					// 首次遊戲，從第 1 關開始
+					return 1;
 				}
+
+				// 根據上次結果決定下次關卡
+				int nextLevel;
+				if (lastGame.Result == "Win")
+				{
+					// 勝利：提升至下一關（最高第 3 關）
+					nextLevel = Math.Min(lastGame.Level + 1, 3);
+				}
+				else // "Lose"
+				{
+					// 失敗：留在同一關
+					nextLevel = lastGame.Level;
+				}
+
+				return nextLevel;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "計算下一關卡等級時發生錯誤 (UserId: {UserId})", userId);
+				return 1; // 發生錯誤時預設為第 1 關
+			}
+		}
+
+		/// <summary>
+		/// 開始遊戲
+		/// 檢查剩餘次數、建立遊戲記錄
+		/// 自動根據用戶歷史記錄決定關卡難度
+		/// </summary>
+		public async Task<(bool success, string message, int? playId, int level)> StartGameAsync(int userId)
+		{
+			try
+			{
+				// 自動計算用戶下一次應挑戰的關卡
+				int level = await GetUserNextGameLevelAsync(userId);
 
 				// 檢查用戶是否存在
 				var user = await _context.Users
@@ -89,14 +134,14 @@ namespace GamiPort.Areas.MiniGame.Services
 
 				if (user == null)
 				{
-					return (false, "用戶不存在或已被鎖定", null);
+					return (false, "用戶不存在或已被鎖定", null, 0);
 				}
 
 				// 檢查今日剩餘次數
 				int remaining = await GetUserRemainingPlaysAsync(userId);
 				if (remaining <= 0)
 				{
-					return (false, "今日遊戲次數已用完，請明天再來", null);
+					return (false, "今日遊戲次數已用完，請明天再來", null, 0);
 				}
 
 				// 獲取用戶的寵物（取第一隻，或根據邏輯選擇）
@@ -106,7 +151,7 @@ namespace GamiPort.Areas.MiniGame.Services
 
 				if (pet == null)
 				{
-					return (false, "用戶無寵物資料", null);
+					return (false, "用戶無寵物資料", null, 0);
 				}
 
 				// 商業規則：冒險開始前檢查寵物狀態
@@ -121,7 +166,7 @@ namespace GamiPort.Areas.MiniGame.Services
 					if (pet.Cleanliness == 0) statusList.Add("清潔");
 					if (pet.Health == 0) statusList.Add("健康");
 
-					return (false, $"寵物狀態不佳（{string.Join("、", statusList)}值為0），請先進行互動恢復寵物狀態", null);
+					return (false, $"寵物狀態不佳（{string.Join("、", statusList)}值為0），請先進行互動恢復寵物狀態", null, 0);
 				}
 
 				// 建立遊戲記錄
@@ -152,12 +197,12 @@ namespace GamiPort.Areas.MiniGame.Services
 				_context.MiniGames.Add(game);
 				await _context.SaveChangesAsync();
 
-				return (true, "遊戲已啟動", game.PlayId);
+				return (true, $"遊戲已啟動 - 第 {level} 關", game.PlayId, level);
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "開始遊戲時發生錯誤 (UserId: {UserId}, Level: {Level})", userId, level);
-				return (false, "啟動遊戲失敗，請稍後重試", null);
+				_logger.LogError(ex, "開始遊戲時發生錯誤 (UserId: {UserId})", userId);
+				return (false, "啟動遊戲失敗，請稍後重試", null, 0);
 			}
 		}
 
