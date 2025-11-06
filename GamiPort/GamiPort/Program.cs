@@ -26,6 +26,7 @@ using GamiPort.Areas.OnlineStore.Utils;   // AnonCookie
 
 // === 新增/確認的 using（本檔有用到的服務/端點） ===
 using GamiPort.Areas.MiniGame.config;      // ★ MiniGame Area 服務擴展方法
+using GamiPort.Infrastructure.BackgroundServices; // ★ 背景服務（寵物每日衰減）
 using GamiPort.Infrastructure.Security;    // ★ 我方統一介面 IAppCurrentUser / AppCurrentUser
 using GamiPort.Infrastructure.Time;
 using GamiPort.Models;                     // GameSpacedatabaseContext（業務資料）
@@ -176,6 +177,9 @@ namespace GamiPort
 			// ------------------------------------------------------------
 			// MiniGame Area 服務（集中註冊：簽到、寵物、遊戲、錢包、Filters）
 			builder.Services.AddMiniGameServices(builder.Configuration);
+
+		// ★ 背景服務：寵物每日衰減（每日 UTC+8 00:00 自動執行）
+		builder.Services.AddHostedService<PetDailyDecayService>();
 			// ------------------------------------------------------------
 			// SignalR（聊天室必備）— 開啟詳細錯誤與穩定心跳
 			// ------------------------------------------------------------

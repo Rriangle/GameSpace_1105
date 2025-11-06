@@ -1137,6 +1137,85 @@ Build succeeded.
 
 ---
 
+### 2025-11-06 02:30 - 實現每日衰減機制（跨邊界背景服務）✅
+
+**目標**:
+- 實現最後一項商業規則：每日衰減機制
+- 創建背景服務在每日 UTC+8 00:00 自動執行
+- 跨越 Areas\MiniGame 邊界修改（已獲使用者批准）
+
+**動作**:
+1. ✅ 進入 PAUSE-AND-ASK 模式，提供詳細方案分析
+2. ✅ 獲得使用者明確批准（"我同意 方案A。立刻執行"）
+3. ✅ 創建 `Infrastructure/BackgroundServices/` 目錄
+4. ✅ 實作 `PetDailyDecayService.cs` 背景服務
+5. ✅ 修改 `Program.cs` 註冊背景服務
+6. ✅ 測試編譯（0 個錯誤）
+7. ✅ 更新文檔（RUNLOG.md、HANDOFF.md、BUSINESS_RULES_VALIDATION.md）
+
+**變更檔案**:
+- `Infrastructure/BackgroundServices/PetDailyDecayService.cs` (新建 114 行)
+  - 繼承 `BackgroundService` 基底類別
+  - 計算下次執行時間（明天 00:00 UTC+8）
+  - 使用 `TimeZones.Taipei` 時區轉換
+  - 讀取衰減配置從 `SystemSettings` 表（可動態調整）
+  - 預設值：飢餓-20、心情-30、體力-10、清潔-20
+  - 應用衰減到所有未刪除寵物（使用 `Math.Max(0, value - decay)` 鉗位）
+  - 完整錯誤處理（錯誤時等待 1 小時後重試）
+  - 詳細日誌記錄（啟動、執行計畫、完成統計、錯誤）
+
+- `Program.cs` (修改 2 處)
+  - Line 29: 新增 `using GamiPort.Infrastructure.BackgroundServices;`
+  - Line 182: 新增 `builder.Services.AddHostedService<PetDailyDecayService>();`
+
+**關鍵技術細節**:
+- **時區處理**: 使用 `TimeZoneInfo.ConvertTimeFromUtc/ConvertTimeToUtc` 確保準確調度
+- **動態配置**: 從 `SystemSettings` 表讀取衰減值（可透過後台管理調整）
+- **依賴注入**: 使用 `IServiceScopeFactory` 創建 Scoped DbContext（背景服務為 Singleton）
+- **錯誤恢復**: 異常時等待 1 小時後重試，避免無限錯誤循環
+- **日誌完整性**: 記錄執行計畫、受影響寵物數量、各項衰減值
+
+**SystemSettings 配置鍵**:
+- `Pet.DailyDecay.HungerDecay` (預設: 20)
+- `Pet.DailyDecay.MoodDecay` (預設: 30)
+- `Pet.DailyDecay.StaminaDecay` (預設: 10)
+- `Pet.DailyDecay.CleanlinessDecay` (預設: 20)
+
+**執行邏輯**:
+1. 應用啟動時，計算距離明天 00:00 UTC+8 的時間差
+2. 使用 `Task.Delay` 等待到目標時間
+3. 執行衰減邏輯（查詢寵物 → 應用衰減 → 保存）
+4. 記錄日誌（受影響寵物數量、衰減值）
+5. 重新計算下次執行時間，進入下一個循環
+
+**原因與理由**:
+- 對應需求：商業規則第 17 項「每日衰減機制」
+- 跨邊界原因：背景服務必須位於 `Infrastructure/` 目錄並在 `Program.cs` 註冊
+- 已獲批准：使用者明確同意方案 A（背景服務方案）
+- 架構優勢：集中式調度、無需外部工具、與應用生命週期綁定
+
+**編譯結果**:
+```
+建置成功。
+78 個警告（既有項目，非 MiniGame Area）
+0 個錯誤 ✓
+```
+
+**商業規則符合性提升**:
+- 修正前：94% 符合（16/17 項規則）
+- 修正後：**100% 符合（17/17 項規則）** 🎉
+- ✅ 所有商業規則已完整實現！
+
+**狀態**: ✅ 完成
+
+**下一步**:
+- ✅ 更新 HANDOFF.md
+- ✅ 更新 BUSINESS_RULES_VALIDATION.md
+- 📌 Git commit & push
+- 📌 開始整體功能測試
+
+---
+
 ## 執行記錄模板
 
 ### YYYY-MM-DD HH:MM - [標題]
