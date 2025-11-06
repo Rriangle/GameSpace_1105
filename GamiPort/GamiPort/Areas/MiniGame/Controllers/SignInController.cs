@@ -64,11 +64,23 @@ namespace GamiPort.Areas.MiniGame.Controllers
 		}
 
 		/// <summary>
+		/// 簽到頁面 - GET 方法，重定向到主頁面
+		/// </summary>
+		[HttpGet]
+		public IActionResult CheckIn()
+		{
+			// GET 請求重定向到簽到主頁
+			var appNow = _appClock.ToAppTime(_appClock.UtcNow);
+			return RedirectToAction(nameof(Index), new { year = appNow.Year, month = appNow.Month });
+		}
+
+		/// <summary>
 		/// 執行簽到 - POST 方法，處理簽到邏輯
 		/// </summary>
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> CheckIn()
+		[ActionName("CheckIn")]
+		public async Task<IActionResult> CheckInPost()
 		{
 			// 檢查登入狀態
 			if (User.Identity?.IsAuthenticated != true)
