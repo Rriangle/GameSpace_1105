@@ -133,23 +133,29 @@ No automated test projects currently exist. Manual testing via browser required.
 ## Area-Based Development Rules
 
 ### Critical Constraints (STRICT ENFORCEMENT)
+
 1. **Zero Cross-Boundary Modification**: When working in an Area (e.g., `Areas/MiniGame/`), you may ONLY modify files within that Area directory
-   - For GamiPort MiniGame work: `C:\Users\n2029\Desktop\work-1105\GamiPort\GamiPort\Areas\MiniGame`
-   - **PAUSE-AND-ASK Mode**: If you must modify files outside your Area:
-     - STOP all modifications immediately
-     - Report: Current situation and why cross-boundary changes are needed
-     - Provide: Solution alternatives with pros/cons
-     - List: Exact file paths that need modification
-     - Show: Unified diff blocks for each proposed change
-     - **DO NOT PROCEED** until explicit approval is granted
+   - **For GamiPort MiniGame work**: `C:\Users\n2029\Desktop\work-1105\GamiPort\GamiPort\Areas\MiniGame`
+   - **All documentation** (RUNLOG.md, HANDOFF.md, CHECKLIST.md) must be placed within the Area boundary
+   - **PAUSE-AND-ASK Mode**: If you determine cross-boundary modification is necessary:
+     - **STOP** all modifications immediately
+     - **Report**:
+       1. Current situation and why changes cannot be completed within Area
+       2. Solution alternatives with pros/cons for each approach
+       3. Exact file paths requiring modification (outside Area boundary)
+       4. **Unified diff blocks** showing: original code → proposed code for EACH file
+     - **DO NOT PROCEED** until explicit user approval is granted
+     - This applies even to seemingly minor changes (Program.cs, shared layouts, Infrastructure/, etc.)
 
-2. **Program.cs Exception**: Only add minimal required registrations for your Area; do not modify other Area configurations
+2. **Program.cs Exception**: Only add minimal required registrations for your Area; do not modify other Area configurations without PAUSE-AND-ASK
 
-3. **Shared Resources**: Do NOT modify:
+3. **Shared Resources - DO NOT MODIFY**:
    - `wwwroot/lib/sb-admin/` (GameSpace)
    - `wwwroot/lib/bootstrap/`
    - `wwwroot/lib/font-awesome/`
-   - Shared layouts in `Views/Shared/`
+   - `Views/Shared/` layouts
+   - `Infrastructure/` utilities (unless adding new Area-specific files)
+   - Any files in other Areas (Forum, OnlineStore, social_hub, etc.)
 
 ### MiniGame Area Specifics
 - **Backend (GameSpace)**: `Areas/MiniGame/**` - Admin controllers, services, views (COMPLETED)
@@ -274,19 +280,43 @@ Batch operations limit: ≤ 1000 records. Write operations should be idempotent 
 ### Encoding
 **All files must be UTF-8 with BOM** (especially for Chinese content).
 
+### Time Zone Handling (CRITICAL)
+**All time operations MUST use `IAppClock` for UTC+8 Taiwan timezone:**
+
+```csharp
+// ❌ WRONG - Never use these directly
+var now = DateTime.Now;
+var utcNow = DateTime.UtcNow;
+
+// ✅ CORRECT - Always use IAppClock
+private readonly IAppClock _appClock;
+var appNow = _appClock.ToAppTime(_appClock.UtcNow);  // UTC+8 Taiwan time
+```
+
+**In Razor Views:**
+```csharp
+@inject GamiPort.Infrastructure.Time.IAppClock AppClock
+@{
+    var today = AppClock.ToAppTime(AppClock.UtcNow);
+    var currentYear = today.Year;
+}
+```
+
+**Recent Fix**: SignInService consecutive days calculation bug (showed 9 days when only signed in 1 day) was caused by incorrect date logic. Always calculate from `today` going backwards, breaking on first gap.
+
 ### Code Generation Best Practices
-**Critical Lessons from Recent Fixes:**
 
 1. **Unique Code Generation** (Coupons/Vouchers):
    - ❌ BAD: `new Random().Next(100000, 999999)` - High collision risk
-   - ✅ GOOD: GUID-based with retry mechanism
+   - ✅ GOOD: GUID-based with retry mechanism and UTC+8 timestamp
    ```csharp
    private async Task<string> GenerateUniqueCodeAsync()
    {
        int maxRetries = 10;
        for (int i = 0; i < maxRetries; i++)
        {
-           var code = $"PREFIX-{DateTime.Now:yyyyMM}-{Guid.NewGuid():N}".Substring(0, 30);
+           var appNow = _appClock.ToAppTime(_appClock.UtcNow);  // Use UTC+8
+           var code = $"PREFIX-{appNow:yyyyMM}-{Guid.NewGuid():N}"[..30];
            if (!await _context.Codes.AnyAsync(c => c.Code == code))
                return code;
            _logger.LogWarning("Code collision, retrying: {Code}, Attempt={Attempt}", code, i + 1);
@@ -295,25 +325,53 @@ Batch operations limit: ≤ 1000 records. Write operations should be idempotent 
    }
    ```
 
-2. **AJAX Response Handling**:
-   - Always check for complete data structures before updating UI
-   - Implement fallback mechanisms (e.g., page reload) when data is incomplete
+2. **AJAX Response Handling & Real-time UI Updates**:
+   - Always validate complete data structures before updating UI
+   - Update all related UI elements (progress bars, badges, counters)
+   - Avoid unreliable CSS selectors (`:has()`, `:contains()`)
    ```javascript
-   if (result.pet && typeof result.pet.hunger === 'number') {
-       updatePetStats(result.pet);
-   } else {
-       console.log('Pet data incomplete, reloading page...');
-       setTimeout(() => window.location.reload(), 1000);
+   // ✅ GOOD - Direct ID-based updates
+   function updatePetStats(pet) {
+       if (typeof pet.hunger === 'number') {
+           const bar = document.getElementById('hunger-bar');
+           bar.style.width = pet.hunger + '%';
+       }
+
+       // Update experience bar with proper proportion
+       if (typeof pet.experience === 'number' && typeof pet.experienceToNextLevel === 'number') {
+           updateExperienceBar(pet.experience, pet.experienceToNextLevel);
+       }
+
+       // Fallback if incomplete
+       if (!pet.hunger || !pet.experience) {
+           console.log('Pet data incomplete, reloading...');
+           setTimeout(() => window.location.reload(), 1000);
+       }
    }
    ```
 
-3. **Image Paths**:
+3. **Image Paths & Background Images**:
    - Always use absolute paths from Area root: `/MiniGame/subfolder/image.png`
-   - Background images: `background-image: url('/MiniGame/...')` not `background-color`
+   - Background images correct path: `/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/`
+   - Verify image preloading with error handlers:
+   ```javascript
+   const img = new Image();
+   img.onload = () => console.log('Loaded:', path);
+   img.onerror = () => {
+       console.error('Failed:', path);
+       element.style.backgroundImage = 'linear-gradient(...)'; // Fallback
+   };
+   img.src = path;
+   ```
 
 4. **Anti-Forgery Protection**:
    - Include token in forms: `@Html.AntiForgeryToken()`
    - Pass in AJAX: `__RequestVerificationToken=${encodeURIComponent(token)}`
+
+5. **CSS Z-Index Layer Management**:
+   - Global UI elements: 1080-1090 (QuickFab, FriendDock, FloatingDock)
+   - Area-specific critical buttons (e.g., "出發冒險"): 1100+
+   - Always verify z-index hierarchy to avoid hidden elements
 
 ## Configuration Management
 
@@ -360,14 +418,43 @@ Example keys:
 - Responsive design (mobile-friendly layouts)
 - Clear visual feedback for all interactions
 
-## Code Quality Standards
+## Code Quality Standards (STRICT ENFORCEMENT)
 
-1. **File Size**: Commits ≤ 3 files or ≤ 400 lines per commit (CI enforcement)
-2. **Constraints**: All DB constraints (PK/FK/UNIQUE/CHECK/DEFAULT) must be honored
-3. **Soft Delete**: Many tables use `IsDeleted`, `DeletedAt`, `DeletedBy`, `DeleteReason` pattern
-4. **Response Caching**: Disabled globally via `ResponseCacheAttribute` to prevent stale HTML after login
-5. **Zero Compilation Errors**: Every commit must build successfully with `dotnet build` (0 errors tolerated)
-6. **No Placeholder Code**: Never use TODO, "略", or incomplete implementations in production code
+1. **Zero Compilation Errors**:
+   - Every commit MUST build successfully: `dotnet build` → 0 errors
+   - Warnings are acceptable; errors are not
+   - Verify build before git commit
+
+2. **Database Constraint Compliance**:
+   - All DB constraints must be honored: PK/FK/UNIQUE/CHECK/DEFAULT/Identity
+   - Field lengths, types, nullability must match exactly
+   - Soft delete pattern: `IsDeleted`, `DeletedAt`, `DeletedBy`, `DeleteReason`
+
+3. **No Placeholder Code**:
+   - Never use TODO, "略", "待實現", or incomplete implementations
+   - All code must be production-ready
+   - If functionality cannot be completed, use PAUSE-AND-ASK mode
+
+4. **File Encoding**:
+   - All files MUST be UTF-8 with BOM (especially Chinese content)
+   - Verify encoding if Chinese characters display as ???
+
+5. **Boundary Compliance**:
+   - All modifications must stay within `GamiPort/GamiPort/Areas/MiniGame/`
+   - Documentation files must also be within Area boundary
+   - Cross-boundary changes require PAUSE-AND-ASK approval
+
+6. **Time Zone Consistency**:
+   - Use `IAppClock.ToAppTime(_appClock.UtcNow)` for all time operations
+   - Never use `DateTime.Now` or `DateTime.UtcNow` directly
+   - All times must be UTC+8 Taiwan timezone
+
+7. **Response Caching**:
+   - Disabled globally via `ResponseCacheAttribute` to prevent stale HTML after login
+
+8. **File Size** (suggested):
+   - Commits ≤ 3 files or ≤ 400 lines per commit for reviewability
+   - Break large changes into logical chunks
 
 ## Troubleshooting
 
@@ -408,26 +495,87 @@ See `schema/` directory for detailed specifications:
 
 ## Development Workflow
 
-### Documentation Requirements
-When working on MiniGame Area features, maintain these files in `Areas/MiniGame/`:
+### Documentation Requirements (MANDATORY)
+When working on MiniGame Area features, maintain these files **within Area boundary** at `GamiPort/GamiPort/Areas/MiniGame/`:
+
 - **RUNLOG.md**: Chronological log (Taipei timezone) of "what was done, why, next steps"
+  - Record technical decisions and rationale
+  - Note file modifications with line numbers
+  - Include git commit hashes for major milestones
+
 - **HANDOFF.md**: Handoff document for continuation with TO-DO list
-- **CHECKLIST.md**: Checkbox-style verification list for DB/requirements alignment
+  - Current state summary
+  - Completed tasks (with checkmarks)
+  - Pending tasks prioritized (P0/P1/P2)
+  - Known issues and blockers
+
+- **CHECKLIST.md**: Checkbox-style verification list
+  - Database table alignment (16 core tables)
+  - Function implementation status (14 required functions)
+  - Bug fixes status
+  - Code quality checks (build errors, timezone, boundaries)
+  - Business rules validation
+
+**Update Timing**:
+- Start of session: Read all three files to understand continuation point
+- During work: Update as tasks complete (real-time tracking)
+- End of session: Final update for next session's "zero-guessing" continuation
 
 ### Development Sequence (MiniGame Area)
-1. **Views First**: Start with Razor views, UI/UX implementation
-2. **Models Second**: Create ViewModels/DTOs aligned with DB schema
-3. **Controllers/Services**: Implement business logic
-4. **Testing**: Manual browser testing (no automated tests yet)
-5. **Git Backup**: Commit frequently with descriptive messages
+1. **Database Verification FIRST**:
+   - Connect to actual SQL Server database
+   - Verify schema, seed data, constraints (PK/FK/UK/CHECK/Identity)
+   - Document actual field types, lengths, nullability
+   - Note: Schema files are reference only; DB is source of truth
+
+2. **Views Second**:
+   - Start with Razor views, UI/UX implementation
+   - Follow Bahamut-inspired layout with light blue modern color scheme
+   - Ensure responsive design and Chinese text readability
+
+3. **Models Third**:
+   - Create ViewModels/DTOs 100% aligned with verified DB schema
+   - Reference backend (GameSpace MiniGame) for naming patterns
+
+4. **Controllers/Services Fourth**:
+   - Implement business logic matching backend patterns
+   - Use `IAppClock` for all time operations
+   - Implement proper transaction management and error handling
+
+5. **Testing**:
+   - Manual browser testing (no automated tests)
+   - Verify all AJAX interactions update UI in real-time
+   - Test timezone consistency (UTC+8)
+
+6. **Git Backup**:
+   - Commit after each small milestone
+   - Build must pass with 0 errors
+   - Use dev branch only (no new branches)
 
 ### Reading Hierarchy (When Implementing Features)
-When conflicts arise, follow this priority order:
-1. **SQL Server Database** (actual schema and seed data)
+**CRITICAL**: When conflicts arise, follow this strict priority order:
+
+1. **SQL Server Database** (actual schema and seed data) - **CONNECT AND VERIFY**
+   - Field types, lengths, nullability, constraints
+   - Seed data for actual values and patterns
+   - Foreign keys, primary keys, unique keys, CHECK constraints, Identity columns
+
 2. **Backend Architecture** (GameSpace MiniGame Area existing code)
-3. **schema/README_合併版.md** Section 3: Frontend Requirements
-4. **schema/前台開發藍圖文件.md** - Frontend blueprint
-5. Other schema documentation files
+   - 24 controllers, 94 services fully implemented
+   - Business logic patterns, naming conventions
+   - Service layer architecture and transaction management
+
+3. **schema/README_合併版.md** - Section 3: Frontend Requirements (14 functions)
+   - 3.1 會員錢包 (6 functions)
+   - 3.2 會員簽到系統 (2 + 1 bonus functions)
+   - 3.3 寵物系統 (4 functions)
+   - 3.4 小遊戲系統 (2 functions)
+
+4. **schema/前台開發藍圖文件.md** - Frontend implementation blueprint
+
+5. **Other schema documentation** (reference materials only)
+
+**Important**: If documentation conflicts with actual database, **database wins**. Always verify assumptions by connecting to SQL Server.
 
 ### Progress Tracking
 - Start each session by reading RUNLOG.md/HANDOFF.md to continue from last checkpoint
@@ -461,4 +609,32 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 feat(GamiPort MiniGame): 實作簽到規則預覽功能
 fix(GamiPort MiniGame): 修復優惠券兌換失敗問題
+fix(GamiPort MiniGame): 修復寵物系統、簽到算法及全局時區問題
+refactor(MiniGame): 移動文檔至正確邊界內
 ```
+
+## Multi-Agent Workflow (RECOMMENDED)
+
+When working on complex tasks, use parallel agents for maximum efficiency:
+
+### Agent Usage Patterns
+```
+User Request: "Fix multiple UI bugs across different pages"
+→ Launch 4 parallel agents:
+  - Agent 1 (Sonnet): Pet/Index.cshtml fixes
+  - Agent 2 (Sonnet): Pet/Customize.cshtml optimizations
+  - Agent 3 (Sonnet): Service layer algorithm fixes
+  - Agent 4 (Haiku): View timezone corrections
+```
+
+### Agent Best Practices
+1. **Use parallel agents** for independent tasks (UI fixes, different pages, separate services)
+2. **Provide complete context** to each agent (file paths, specific issues, expected solutions)
+3. **Specify model tier**: Haiku for simple tasks, Sonnet for complex logic, Opus for architecture
+4. **Aggregate results**: Collect all agent outputs, verify consistency, commit together
+5. **Diagnostic before implementation**: Use agents to analyze root causes before coding
+
+### Recent Success Example
+**Task**: Fix 12 bugs across Pet system, Sign-in, Wallet, and global timezone
+**Approach**: 4 parallel diagnostic agents → identified root causes → 4 parallel implementation agents
+**Result**: All fixes completed in single session, 0 errors, pushed to dev branch
