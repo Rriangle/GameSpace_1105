@@ -104,8 +104,8 @@
 									}
 									}
 								</select>
-								<button type="button" class="btn btn-sm btn-info" id="goToMonth">
-									<i class="fas fa-arrow-right"></i>
+								<button type="button" class="btn btn-info" id="goToMonth" style="padding: 8px 16px;">
+									<i class="fas fa-arrow-right me-1"></i>前往
 								</button>
 							</div>
 
@@ -158,17 +158,17 @@
 														@if (day.IsSignedIn)
 														{
 															<!-- 印章圖示蓋上去 -->
-															<div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="pointer-events: none;">
+															<div class="position-absolute top-50 start-50 translate-middle" style="pointer-events: none; z-index: 2;">
 																<img src="/MiniGame/stamps/SIGNIN-STAMP.png"
 																	 alt="已簽到印章"
-																	 style="max-width: 60%; opacity: 0.85;" />
+																	 style="width: 70px; height: 70px; opacity: 0.75;" />
 															</div>
-															<div style="font-size: 11px; color: #17a2b8; margin-top: 4px; position: relative; z-index: 1;">
+															<div style="font-size: 11px; color: #17a2b8; margin-top: 4px; position: relative; z-index: 3;">
 																<i class="fas fa-check-circle"></i> 已簽到
 															</div>
 															@if (day.PointsGained.HasValue)
 															{
-																<div style="font-size: 10px; color: #666; position: relative; z-index: 1;">+@day.PointsGained P</div>
+																<div style="font-size: 10px; color: #666; position: relative; z-index: 3;">+@day.PointsGained P</div>
 															}
 														}
 													</td>
