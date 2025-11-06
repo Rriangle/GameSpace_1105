@@ -57,7 +57,23 @@
 										<span class="badge bg-secondary">@coupon.DiscountType</span>
 									</div>
 									<p class="card-text">
-										<strong>折扣值:</strong> @coupon.DiscountValue<br />
+										<strong>@(coupon.DiscountType == "Percent" ? "折抵比率" : "折扣值"):</strong>
+										@if (coupon.DiscountType == "Percent")
+										{
+											var percentage = ((int)(coupon.DiscountValue * 100 ?? 0));
+											<text>@percentage%</text>
+										}
+										else if (coupon.DiscountType == "Fixed")
+										{
+											var fixedValue = ((int)(coupon.DiscountValue ?? 0));
+											<text>$@fixedValue</text>
+										}
+										else
+										{
+											var defaultValue = ((int)(coupon.DiscountValue ?? 0));
+											<text>@defaultValue</text>
+										}
+										<br />
 										<strong>所需點數:</strong> <span class="text-danger fw-bold">@coupon.PointsCost</span> 點<br />
 										<strong>有效期:</strong> @(((DateTime?)coupon.ValidFrom)?.ToString("yyyy/MM/dd") ?? "-") ~ @(((DateTime?)coupon.ValidTo)?.ToString("yyyy/MM/dd") ?? "-")
 									</p>

@@ -339,12 +339,12 @@
 
         /* ========== NEW LAYOUT STYLES ========== */
 
-        /* Top-right Toolbar */
+        /* Top-right Toolbar - 固定在互動操作區域上方 */
         .pet-toolbar {
-            position: fixed;
-            top: 80px;
-            right: 30px;
-            z-index: 1050;
+            position: absolute;
+            top: -60px;
+            right: 0;
+            z-index: 10;
             display: flex;
             gap: 10px;
         }
@@ -565,6 +565,7 @@
             background: rgba(0, 0, 0, 0.03);
             border-radius: 16px;
             padding: 16px;
+            position: relative;
         }
 
         .interaction-menu-title {
@@ -716,8 +717,8 @@
         /* Responsive Design */
         @@media (max-width: 992px) {
             .pet-toolbar {
-                top: 70px;
-                right: 20px;
+                top: -55px;
+                right: 0;
             }
 
             .tool-icon-btn {
@@ -743,8 +744,8 @@
 
         @@media (max-width: 768px) {
             .pet-toolbar {
-                top: 60px;
-                right: 15px;
+                top: -50px;
+                right: 0;
                 gap: 8px;
             }
 
@@ -792,18 +793,6 @@
                 </div>
             </div>
 
-            <!-- Top-right Toolbar -->
-            @if (Model != null)
-            {
-                <div class="pet-toolbar">
-                    <button class="tool-icon-btn" id="levelInfoBtn" type="button" data-bs-toggle="modal" data-bs-target="#levelInfoModal" title="等級資訊">
-                        <i class="bi bi-info-circle"></i>
-                    </button>
-                    <a href="/MiniGame/Pet/Customize" class="tool-icon-btn" title="外觀定制">
-                        <i class="bi bi-gear"></i>
-                    </a>
-                </div>
-            }
 
             @if (Model != null)
             {
@@ -966,6 +955,16 @@
                     <!-- Right Column: Interaction Menu -->
                     <div class="col-lg-3 col-md-12">
                         <div class="interaction-menu">
+                            <!-- Toolbar位於互動操作上方 -->
+                            <div class="pet-toolbar">
+                                <button class="tool-icon-btn" id="levelInfoBtn" type="button" data-bs-toggle="modal" data-bs-target="#levelInfoModal" title="等級資訊">
+                                    <i class="bi bi-info-circle"></i>
+                                </button>
+                                <a href="/MiniGame/Pet/Customize" class="tool-icon-btn" title="外觀定制">
+                                    <i class="bi bi-gear"></i>
+                                </a>
+                            </div>
+
                             <h5 class="interaction-menu-title">
                                 <i class="bi bi-hand-index-thumb"></i> 互動操作
                             </h5>
@@ -1086,11 +1085,11 @@
                         </div>
                         <div class="stat-card">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="stat-label">當前經驗</span>
+                                <span class="stat-label">當前經驗值</span>
                                 <span class="fw-bold text-teal" id="current-exp-display">@Model.Experience</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="stat-label">升級需求</span>
+                                <span class="stat-label">升級所須經驗值</span>
                                 <span class="fw-bold text-teal" id="required-exp-display">@(Model.ExperienceToNextLevel ?? 0)</span>
                             </div>
                             <div class="d-flex justify-content-between">
@@ -1180,32 +1179,38 @@
                         petAvatar.playInteraction(action);
                     }
 
-                    // 構建數值變化提示
-                    let statChangesText = '';
-                    if (result.statChanges) {
-                        const changes = [];
+                    // 構建完整的顯示消息
+                    let displayMessages = [];
+
+                    // 1. 基本數值變化
+                    if (result.statChanges && Object.keys(result.statChanges).length > 0) {
                         for (const [key, value] of Object.entries(result.statChanges)) {
-                            const label = getStatLabel(key);
-                            const changeStr = value > 0 ? `+${value}` : value;
-                            changes.push(`${label} ${changeStr}`);
+                            if (key !== 'experience' && key !== 'health') {
+                                const label = getStatLabel(key);
+                                const changeStr = value > 0 ? `+${value}` : value;
+                                displayMessages.push(`${label}${changeStr}`);
+                            }
                         }
-                        statChangesText = changes.join(', ');
                     }
 
-                    // 檢查是否五值全滿
-                    let bonusText = '';
-                    if (result.pet &&
-                        result.pet.hunger === 100 &&
-                        result.pet.mood === 100 &&
-                        result.pet.stamina === 100 &&
-                        result.pet.cleanliness === 100 &&
-                        result.pet.health === 100) {
-                        bonusText = '<div style="color: #ffa500; font-weight: bold; margin-top: 0.5rem;">🎉 完美狀態! 獲得 100 經驗值 + 100 會員點數</div>';
+                    // 2. 健康值回復邏輯
+                    if (result.healthRecovered) {
+                        displayMessages.push('健康值回復至100');
                     }
+
+                    // 3. 每日首次五值全滿獎勵
+                    if (result.isFirstDailyFullStats) {
+                        displayMessages.push(`寵物經驗值+${result.bonusExperience}`);
+                        displayMessages.push(`會員點數+${result.bonusPoints}`);
+                    }
+
+                    // 構建最終消息
+                    const finalMessage = displayMessages.length > 0
+                        ? displayMessages.join('、')
+                        : result.message;
 
                     // 顯示成功消息
-                    const fullMessage = result.message + (statChangesText ? ' (' + statChangesText + ')' : '');
-                    showResult(true, fullMessage, result.statChanges, bonusText);
+                    showResult(true, finalMessage, result.statChanges, result.isFirstDailyFullStats, result.bonusExperience, result.bonusPoints);
 
                     // 更新寵物狀態(檢查pet對象是否存在且有有效數據)
                     if (result.pet && typeof result.pet.hunger === 'number') {
@@ -1228,11 +1233,12 @@
                     }
 
                 } else {
-                    showResult(false, result.message, null, '');
+                    // 顯示錯誤消息（包括單項已滿提示、五值全滿提示等）
+                    showResult(false, result.message, null, false, 0, 0);
                 }
 
             } catch (error) {
-                showResult(false, '互動失敗,請重試', null, '');
+                showResult(false, '互動失敗,請重試', null, false, 0, 0);
                 console.error('Interaction error:', error);
             } finally {
                 button.disabled = false;
@@ -1388,7 +1394,7 @@
             }
         }
 
-        function showResult(success, message, statChanges, bonusHtml) {
+        function showResult(success, message, statChanges, isFirstDailyFullStats, bonusExp, bonusPoints) {
             const resultDiv = document.getElementById('interactionResult');
             const resultText = document.getElementById('resultText');
             const statChange = document.getElementById('statChange');
@@ -1408,24 +1414,14 @@
             // Update message
             resultText.textContent = message;
 
-            // Update stat changes
+            // Update stat changes - 不再顯示詳細變化，因為已經在message中顯示
             let changeHtml = '';
-            if (statChanges) {
-                let statsHtml = '<div style="margin-top: 0.5rem;">';
-                for (const [stat, change] of Object.entries(statChanges)) {
-                    const changeValue = change > 0 ? `+${change}` : `${change}`;
-                    const changeColor = change > 0 ? '#28a745' : '#dc3545';
-                    const statLabel = getStatLabel(stat);
-                    statsHtml += `<div style="color: ${changeColor}; font-size: 0.875rem;">
-                        ${statLabel}: <strong>${changeValue}</strong>
-                    </div>`;
-                }
-                statsHtml += '</div>';
-                changeHtml = statsHtml;
-            }
 
-            if (bonusHtml) {
-                changeHtml += bonusHtml;
+            // 如果是首次五值全滿，顯示特殊提示
+            if (isFirstDailyFullStats && bonusExp > 0) {
+                changeHtml = `<div style="color: #ffa500; font-weight: bold; margin-top: 0.5rem; font-size: 1rem;">
+                    🎉 恭喜！今日首次達成五值全滿！
+                </div>`;
             }
 
             statChange.innerHTML = changeHtml;
@@ -1433,10 +1429,10 @@
             // Show result
             resultDiv.classList.add('show');
 
-            // Auto-hide after 5 seconds
+            // Auto-hide after 6 seconds (延長顯示時間，因為消息更長)
             setTimeout(() => {
                 resultDiv.classList.remove('show');
-            }, 5000);
+            }, 6000);
         }
 
         function getStatLabel(stat) {

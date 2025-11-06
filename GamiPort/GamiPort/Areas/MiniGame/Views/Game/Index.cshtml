@@ -624,16 +624,12 @@
                         @if (selectedLevel > 0 && todayRemainingPlays > 0)
                         {
                             <div class="game-controls">
-                                <form method="post" asp-area="MiniGame" asp-controller="Game" asp-action="StartGame" style="display: inline;">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="level" value="@selectedLevel" />
-                                    <button type="submit" class="btn-game-action btn-start-game">
-                                        <i class="bi bi-play-circle-fill"></i>
-                                        開始遊戲
-                                    </button>
-                                </form>
+                                <button type="button" class="btn-game-action btn-start-game" onclick="startGame()">
+                                    <i class="bi bi-play-circle-fill"></i>
+                                    開始遊戲
+                                </button>
 
-                                <button class="btn-game-action btn-abort-game" onclick="abortGame()">
+                                <button type="button" class="btn-game-action btn-abort-game" onclick="cancelGame()">
                                     <i class="bi bi-x-circle"></i>
                                     取消
                                 </button>
@@ -802,15 +798,6 @@ else
             if (currentDifficulty && currentDifficulty !== '0') {
                 initializeGame(currentDifficulty);
             }
-
-            // Setup start game button click handler
-            const startGameForm = document.querySelector('form[action*="StartGame"]');
-            if (startGameForm) {
-                startGameForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    startGame();
-                });
-            }
         });
 
         function initializeGame(difficulty) {
@@ -925,6 +912,11 @@ else
                     handleGameEnd({ result: 'abort', score: 0 });
                 }
             }
+        }
+
+        function cancelGame() {
+            // 直接返回寵物頁面，不顯示確認對話框
+            window.location.href = '/MiniGame/Pet';
         }
 
         // 處理難度按鈕選擇

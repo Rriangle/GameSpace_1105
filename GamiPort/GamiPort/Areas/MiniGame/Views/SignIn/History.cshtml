@@ -69,7 +69,7 @@
 									<td><span style="color: #ff9f43; font-weight: bold;">+@item.PointsGained</span></td>
 									<td><span style="color: #28a745;">+@item.ExpGained</span></td>
 									<td>
-										@if (!string.IsNullOrEmpty(item.CouponGained) && !item.CouponGained.StartsWith("AUTO-"))
+										@if (!string.IsNullOrEmpty(item.CouponGained) && item.CouponGained.StartsWith("CPN-"))
 										{
 											<span class="badge badge-success">@item.CouponGained</span>
 										}

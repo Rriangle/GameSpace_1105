@@ -489,9 +489,12 @@
                     @foreach (var coupon in coupons)
                     {
                         var validTo = coupon.CouponType?.ValidTo;
-                        var isExpired = validTo != null && validTo < appNow;
+                        // 注意：validTo 是 UTC 時間，appNow 是 UTC+8 時間
+                        // 需要將 validTo 轉換為 UTC+8 進行比較
+                        var validToApp = validTo != null ? AppClock.ToAppTime(validTo.Value) : (DateTime?)null;
+                        var isExpired = validToApp != null && validToApp < appNow;
                         var isUsed = coupon.IsUsed;
-                        var daysUntilExpiry = validTo != null ? (int)(validTo.Value - appNow).TotalDays : -1;
+                        var daysUntilExpiry = validToApp != null ? (int)(validToApp.Value - appNow).TotalDays : -1;
                         var isExpiringSoon = daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
 
                         <div class="coupon-card" data-coupon-id="@coupon.CouponId" data-status="@(isUsed ? "used" : isExpired ? "expired" : "unused")">
@@ -537,7 +540,16 @@
 
                                 <!-- 優惠券資訊 -->
                                 <div class="coupon-info-row">
-                                    <span class="coupon-info-label">折扣優惠</span>
+                                    <span class="coupon-info-label">
+                                        @if (coupon.CouponType?.DiscountType == "Percent")
+                                        {
+                                            <text>折抵比率</text>
+                                        }
+                                        else
+                                        {
+                                            <text>折扣優惠</text>
+                                        }
+                                    </span>
                                     <span class="coupon-info-value coupon-discount">
                                         @if (coupon.CouponType?.Name?.Contains("免運") == true)
                                         {
@@ -545,16 +557,18 @@
                                         }
                                         else if (coupon.CouponType?.DiscountType == "Percent")
                                         {
-                                            var percentage = (coupon.CouponType.DiscountValue ?? 0) * 100;
+                                            var percentage = ((int)((coupon.CouponType.DiscountValue ?? 0) * 100));
                                             <text>@percentage% OFF</text>
                                         }
                                         else if (coupon.CouponType?.DiscountType == "Fixed")
                                         {
-                                            <text>折抵 $@(coupon.CouponType.DiscountValue ?? 0)</text>
+                                            var fixedDiscount = ((int)(coupon.CouponType.DiscountValue ?? 0));
+                                            <text>折抵 $@fixedDiscount</text>
                                         }
                                         else
                                         {
-                                            <text>$@(coupon.CouponType?.DiscountValue ?? 0)</text>
+                                            var defaultValue = ((int)(coupon.CouponType?.DiscountValue ?? 0));
+                                            <text>$@defaultValue</text>
                                         }
                                     </span>
                                 </div>
@@ -568,17 +582,18 @@
                                         }
                                         else
                                         {
-                                            <text>$@(coupon.CouponType?.MinSpend ?? 0)</text>
+                                            var minSpend = ((int)(coupon.CouponType?.MinSpend ?? 0));
+                                            <text>$@minSpend</text>
                                         }
                                     </span>
                                 </div>
 
-                                @if (!isUsed && validTo != null)
+                                @if (!isUsed && validToApp != null)
                                 {
                                     <div class="coupon-info-row">
                                         <span class="coupon-info-label">過期日期</span>
                                         <span class="coupon-info-value @(isExpiringSoon || isExpired ? "coupon-expiry" : "")">
-                                            @(validTo?.ToUtc8String("yyyy-MM-dd") ?? "-")
+                                            @(validToApp?.ToString("yyyy-MM-dd") ?? "-")
                                         </span>
                                     </div>
 
