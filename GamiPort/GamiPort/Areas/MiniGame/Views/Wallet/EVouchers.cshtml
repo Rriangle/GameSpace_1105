@@ -4,6 +4,7 @@
 	var eVouchers = viewData.EVouchers as List<GamiPort.Models.Evoucher> ?? new List<GamiPort.Models.Evoucher>();
 	var qrCodeData = viewData.QRCodeData as Dictionary<int, string> ?? new Dictionary<int, string>();
 	var searchTerm = viewData.SearchTerm as string ?? "";
+	var filter = viewData.Filter as string ?? "all";
 	var totalCount = (int)viewData.TotalCount;
 	var unusedCount = (int)viewData.UnusedCount;
 	var usedCount = (int)viewData.UsedCount;
@@ -18,31 +19,40 @@
 		<li class="breadcrumb-item active">電子禮券</li>
 	</ol>
 
-	<!-- 統計卡片 -->
+	<!-- 統計卡片（可點擊篩選） -->
 	<div class="row mb-4">
 		<div class="col-lg-3 col-md-6 mb-3">
-			<div class="card bg-info text-white shadow">
-				<div class="card-body">
-					<div class="text-white-50 small">總計</div>
-					<div class="h4 mb-0">@totalCount 張</div>
+			<a href="@Url.Action("EVouchers", new { search = searchTerm, filter = "all" })" class="text-decoration-none">
+				<div class="card bg-info text-white shadow @(filter == "all" ? "border border-3 border-warning" : "") cursor-pointer hover-lift">
+					<div class="card-body">
+						<div class="text-white-50 small">總計</div>
+						<div class="h4 mb-0">@totalCount 張</div>
+						@if (filter == "all") { <div class="badge bg-warning text-dark mt-2">目前顯示</div> }
+					</div>
 				</div>
-			</div>
+			</a>
 		</div>
 		<div class="col-lg-3 col-md-6 mb-3">
-			<div class="card bg-success text-white shadow">
-				<div class="card-body">
-					<div class="text-white-50 small">可使用</div>
-					<div class="h4 mb-0">@unusedCount 張</div>
+			<a href="@Url.Action("EVouchers", new { search = searchTerm, filter = "unused" })" class="text-decoration-none">
+				<div class="card bg-success text-white shadow @(filter == "unused" ? "border border-3 border-warning" : "") cursor-pointer hover-lift">
+					<div class="card-body">
+						<div class="text-white-50 small">可使用</div>
+						<div class="h4 mb-0">@unusedCount 張</div>
+						@if (filter == "unused") { <div class="badge bg-warning text-dark mt-2">目前顯示</div> }
+					</div>
 				</div>
-			</div>
+			</a>
 		</div>
 		<div class="col-lg-3 col-md-6 mb-3">
-			<div class="card bg-secondary text-white shadow">
-				<div class="card-body">
-					<div class="text-white-50 small">已使用</div>
-					<div class="h4 mb-0">@usedCount 張</div>
+			<a href="@Url.Action("EVouchers", new { search = searchTerm, filter = "used" })" class="text-decoration-none">
+				<div class="card bg-secondary text-white shadow @(filter == "used" ? "border border-3 border-warning" : "") cursor-pointer hover-lift">
+					<div class="card-body">
+						<div class="text-white-50 small">已使用</div>
+						<div class="h4 mb-0">@usedCount 張</div>
+						@if (filter == "used") { <div class="badge bg-warning text-dark mt-2">目前顯示</div> }
+					</div>
 				</div>
-			</div>
+			</a>
 		</div>
 	</div>
 
@@ -141,11 +151,18 @@
 									<h6 class="text-center mb-2">
 										<i class="fas fa-qrcode me-1"></i>@(isUsed ? "已核銷 QR Code" : "核銷 QR Code")
 									</h6>
-									<div class="text-center">
+									<div class="text-center position-relative d-inline-block">
 										<img src="@qrCodeData[voucher.EvoucherId]"
 											 alt="QR Code"
-											 class="img-fluid @(isUsed ? "opacity-50" : "")"
+											 class="img-fluid"
 											 style="max-width: 200px; width: 100%;" />
+										@if (isUsed)
+										{
+											<img src="/MiniGame/stamps/QRCODE_REDEEMED_STAMP.png"
+												 alt="已核銷印章"
+												 class="position-absolute top-50 start-50 translate-middle"
+												 style="max-width: 150px; width: 75%; opacity: 0.9;" />
+										}
 									</div>
 									<div class="text-center mt-2">
 										<small class="text-muted">
@@ -247,6 +264,23 @@
 		</a>
 	</div>
 </div>
+
+@section Styles {
+	<style>
+		.cursor-pointer {
+			cursor: pointer;
+		}
+
+		.hover-lift {
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.hover-lift:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+		}
+	</style>
+}
 
 @section Scripts {
 	<script>

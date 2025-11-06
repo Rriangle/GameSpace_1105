@@ -130,10 +130,10 @@ namespace GamiPort.Areas.MiniGame.Controllers
 		}
 
 		/// <summary>
-		/// 電子禮券列表 - 顯示用戶所有電子禮券，支持模糊搜尋
+		/// 電子禮券列表 - 顯示用戶所有電子禮券，支持模糊搜尋和篩選
 		/// </summary>
 		[HttpGet]
-		public async Task<IActionResult> EVouchers(string search = "")
+		public async Task<IActionResult> EVouchers(string search = "", string filter = "all")
 		{
 			// 檢查登入狀態
 			if (User.Identity?.IsAuthenticated != true)
@@ -154,8 +154,20 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				// 獲取電子禮券列表（支持模糊搜尋）
 				var eVouchers = await _walletService.GetUserEVouchersAsync(userId, search);
 
-				// 為所有電子禮券生成 QR Code（包括已使用的，方便查看歷史記錄）
+				// 根據篩選條件過濾
 				var eVoucherList = eVouchers.ToList();
+				if (filter == "unused")
+				{
+					eVoucherList = eVoucherList.Where(e => !e.IsUsed).ToList();
+				}
+				else if (filter == "used")
+				{
+					eVoucherList = eVoucherList.Where(e => e.IsUsed).ToList();
+				}
+				// filter == "all" 則顯示全部
+
+				// 計算完整統計（不受篩選影響）
+				var totalEVouchers = eVouchers.ToList();
 				var qrCodeData = new Dictionary<int, string>();
 
 				foreach (var voucher in eVoucherList)
@@ -176,9 +188,10 @@ namespace GamiPort.Areas.MiniGame.Controllers
 					EVouchers = eVoucherList,
 					QRCodeData = qrCodeData,
 					SearchTerm = search,
-					TotalCount = eVoucherList.Count,
-					UnusedCount = eVoucherList.Count(e => !e.IsUsed),
-					UsedCount = eVoucherList.Count(e => e.IsUsed)
+					Filter = filter,
+					TotalCount = totalEVouchers.Count,
+					UnusedCount = totalEVouchers.Count(e => !e.IsUsed),
+					UsedCount = totalEVouchers.Count(e => e.IsUsed)
 				};
 
 				return View(viewData);
