@@ -486,15 +486,30 @@
 
                 div.className = `background-option ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`;
 
-                if (!isDisabled) {
-                    div.onclick = () => selectBackgroundColor(option.code, option.cost, option.image);
-                }
-
                 div.innerHTML = `
                     <div class="background-swatch" style="background-image: url('${option.image}'); background-size: cover; background-position: center; ${isDisabled ? 'opacity: 0.4; cursor: not-allowed;' : ''}"></div>
                     <div class="color-label" style="${isDisabled ? 'color: #999;' : ''}">${option.name}</div>
                     <div class="color-cost" style="${isDisabled ? 'background: #e0e0e0; color: #999;' : ''}">${option.cost} 點</div>
                 `;
+
+                // 只為未禁用的選項綁定點擊事件（使用IIFE捕獲選項和元素參考）
+                if (!isDisabled) {
+                    // 使用立即執行函數表達式(IIFE)確保正確的閉包和參數傳遞
+                    (function(opt, element) {
+                        element.addEventListener('click', function(event) {
+                            // 將當前元素(this)傳入selectBackgroundColor，確保selected狀態正確更新
+                            selectBackgroundColor(opt.code, opt.cost, opt.image, element);
+                            event.preventDefault();
+                            event.stopPropagation();
+                        });
+                    })(option, div);
+                } else {
+                    // 禁用選項的視覺反饋
+                    div.style.cursor = 'not-allowed';
+                    div.style.pointerEvents = 'none';
+                    div.style.opacity = '0.6';
+                }
+
                 grid.appendChild(div);
             });
         }
@@ -513,37 +528,81 @@
             document.getElementById('confirmSkinColor').disabled = false;
         }
 
-        function selectBackgroundColor(code, cost, image) {
+        function selectBackgroundColor(code, cost, image, clickedElement) {
             selectedBackgroundColor = code;
             selectedBackgroundImage = image;
+
+            // 更新選中狀態 - 移除所有舊的selected類
             document.querySelectorAll('.background-option').forEach(el => el.classList.remove('selected'));
-            event.target.closest('.background-option').classList.add('selected');
+
+            // 新增selected類到當前元素（使用傳入的clickedElement參數或搜尋）
+            if (clickedElement) {
+                clickedElement.classList.add('selected');
+            } else {
+                // 備援：通過data屬性尋找正確的元素
+                const option = backgroundColorOptions.find(o => o.code === code);
+                if (option) {
+                    // 尋找包含此背景的元素
+                    const options = document.querySelectorAll('.background-option');
+                    let found = false;
+                    options.forEach((el, idx) => {
+                        if (backgroundColorOptions[idx] === option && !found) {
+                            el.classList.add('selected');
+                            found = true;
+                        }
+                    });
+                }
+            }
+
+            // 更新成本顯示
             document.getElementById('backgroundColorCost').textContent = cost;
 
-            // Update preview card with background image
+            // 立即更新預覽卡的背景圖片
             const previewCard = document.getElementById('previewCard');
 
+            // 確保路徑格式正確
+            let imagePath = image;
+            if (!imagePath.startsWith('/')) {
+                imagePath = '/' + imagePath;
+            }
+
+            // Debug: 確認背景圖片路徑
+            console.log('[Background Preview] Selected:', code, 'Cost:', cost, 'Image path:', imagePath);
+
+            // 先清除之前的背景
+            previewCard.style.backgroundImage = 'none';
+
             // 使用 CSS 屬性確保背景圖片正確顯示
-            previewCard.style.backgroundImage = `url('${image}')`;
+            previewCard.style.backgroundImage = `url('${imagePath}')`;
             previewCard.style.backgroundSize = 'cover';
             previewCard.style.backgroundPosition = 'center';
             previewCard.style.backgroundRepeat = 'no-repeat';
+            previewCard.style.backgroundAttachment = 'scroll';
             previewCard.style.backgroundColor = 'transparent';
 
-            // Debug: 確認背景圖片路徑
-            console.log('[Background Preview] Selected:', code, 'Image path:', image);
+            // 強制重繪（確保瀏覽器立即渲染背景變更）
+            void previewCard.offsetHeight;
+            void previewCard.offsetWidth;
 
-            // 預載圖片確保能正確顯示
+            // 預載圖片確保能正確顯示（非同步）
             const img = new Image();
             img.onload = function() {
-                console.log('[Background Preview] Image loaded successfully:', image);
+                console.log('[Background Preview] Image loaded successfully:', imagePath);
+                // 圖片載入成功後再次確保CSS設置正確（以應對延遲載入）
+                if (selectedBackgroundColor === code) {
+                    previewCard.style.backgroundImage = `url('${imagePath}')`;
+                }
             };
             img.onerror = function() {
-                console.error('[Background Preview] Failed to load image:', image);
-                // 如果圖片載入失敗，顯示漸層背景作為後備
-                previewCard.style.backgroundImage = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                console.error('[Background Preview] Failed to load image:', imagePath);
+                // 如果圖片載入失敗，顯示紫色漸層背景作為後備
+                if (selectedBackgroundColor === code) {
+                    const fallbackGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    previewCard.style.backgroundImage = fallbackGradient;
+                    console.warn('[Background Preview] Using fallback gradient instead');
+                }
             };
-            img.src = image;
+            img.src = imagePath;
 
             document.getElementById('confirmBackgroundColor').disabled = false;
         }
@@ -563,17 +622,34 @@
         function resetBackgroundColorSelection() {
             selectedBackgroundColor = '@currentBackgroundColor';
             selectedBackgroundImage = '@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")';
+
+            // 重新初始化背景色選項（會自動恢復原始selected狀態）
             initializeBackgroundColors();
 
-            // Restore preview card background
+            // 恢復預覽卡背景（使用與selectBackgroundColor相同的邏輯）
             const previewCard = document.getElementById('previewCard');
-            previewCard.style.backgroundImage = `url('${selectedBackgroundImage}')`;
+
+            // 確保路徑格式正確
+            let imagePath = selectedBackgroundImage;
+            if (!imagePath.startsWith('/')) {
+                imagePath = '/' + imagePath;
+            }
+
+            console.log('[Background Reset] Restored to:', selectedBackgroundColor, 'Image:', imagePath);
+
+            // 清除之前的背景
+            previewCard.style.backgroundImage = 'none';
+
+            // 設置背景圖片
+            previewCard.style.backgroundImage = `url('${imagePath}')`;
             previewCard.style.backgroundSize = 'cover';
             previewCard.style.backgroundPosition = 'center';
             previewCard.style.backgroundRepeat = 'no-repeat';
+            previewCard.style.backgroundAttachment = 'scroll';
             previewCard.style.backgroundColor = 'transparent';
 
-            console.log('[Background Reset] Restored to:', selectedBackgroundColor, 'Image:', selectedBackgroundImage);
+            // 強制重繪
+            void previewCard.offsetHeight;
 
             document.getElementById('confirmBackgroundColor').disabled = true;
         }

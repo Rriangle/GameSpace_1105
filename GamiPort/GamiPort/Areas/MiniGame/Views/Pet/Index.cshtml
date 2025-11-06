@@ -33,6 +33,7 @@
             width: 120px;
             height: 120px;
             border-radius: 50%;
+            background-color: #f5f5dc; /* 淺米黃色 beige */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -556,6 +557,7 @@
 
         .edit-name-btn {
             margin-top: 0.5rem;
+            margin-left: 10px;
         }
 
         /* Interaction Menu (Right) */
@@ -657,10 +659,6 @@
 
         /* Bottom Adventure Button (NEW) */
         .adventure-go-btn {
-            position: fixed;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
             background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
             color: white;
             border: none;
@@ -668,19 +666,20 @@
             padding: 16px 40px;
             font-size: 1.25rem;
             font-weight: 700;
-            display: flex;
+            display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 12px;
-            z-index: 1100;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
             text-decoration: none;
             animation: pulseAdventure 2s ease-in-out infinite;
+            margin-top: 2rem;
         }
 
         .adventure-go-btn:hover {
-            transform: translateX(-50%) translateY(-4px);
+            transform: translateY(-4px);
             box-shadow: 0 12px 32px rgba(255, 107, 53, 0.6);
             background: linear-gradient(135deg, #f7931e 0%, #ff6b35 100%);
             color: white;
@@ -688,7 +687,7 @@
         }
 
         .adventure-go-btn:active {
-            transform: translateX(-50%) translateY(-2px);
+            transform: translateY(-2px);
         }
 
         .adventure-go-btn i {
@@ -770,7 +769,6 @@
             }
 
             .adventure-go-btn {
-                bottom: 30px;
                 padding: 12px 28px;
                 font-size: 1rem;
             }
@@ -789,7 +787,7 @@
                     <i class="bi bi-heart-fill text-danger fs-2 me-3"></i>
                     <div>
                         <h2 class="mb-0">我的寵物</h2>
-                        <p class="text-muted mb-0">與您的寵物互動，一起成長冒險吧！</p>
+                        <p class="text-muted mb-0">與您的寵物互動,一起成長冒險吧!</p>
                     </div>
                 </div>
             </div>
@@ -835,7 +833,7 @@
                             <div class="stat-item">
                                 <div class="stat-item-header">
                                     <i class="bi bi-cup-straw"></i>
-                                    <span class="stat-name">飢餓度</span>
+                                    <span class="stat-name">飢餓值</span>
                                     <span class="stat-value" id="hunger-value">@Model.Hunger%</span>
                                 </div>
                                 <div class="stat-progress-wrapper">
@@ -844,14 +842,14 @@
                                          style="width: @Model.Hunger%;">
                                     </div>
                                 </div>
-                                <small class="stat-status" id="hunger-status">@(Model.Hunger < 20 ? "飢餓" : "飽食")</small>
+                                <small class="stat-status" id="hunger-status">@(Model.Hunger < 20 ? "飢餓" : Model.Hunger >= 50 ? "飽食" : "有點餓")</small>
                             </div>
 
                             <!-- Mood -->
                             <div class="stat-item">
                                 <div class="stat-item-header">
                                     <i class="bi bi-emoji-smile"></i>
-                                    <span class="stat-name">心情</span>
+                                    <span class="stat-name">心情值</span>
                                     <span class="stat-value" id="mood-value">@Model.Mood%</span>
                                 </div>
                                 <div class="stat-progress-wrapper">
@@ -860,14 +858,14 @@
                                          style="width: @Model.Mood%;">
                                     </div>
                                 </div>
-                                <small class="stat-status" id="mood-status">@(Model.Mood < 20 ? "難過" : "開心")</small>
+                                <small class="stat-status" id="mood-status">@(Model.Mood < 20 ? "難過" : Model.Mood >= 50 ? "開心" : "普通")</small>
                             </div>
 
                             <!-- Stamina -->
                             <div class="stat-item">
                                 <div class="stat-item-header">
                                     <i class="bi bi-lightning"></i>
-                                    <span class="stat-name">體力</span>
+                                    <span class="stat-name">體力值</span>
                                     <span class="stat-value" id="stamina-value">@Model.Stamina%</span>
                                 </div>
                                 <div class="stat-progress-wrapper">
@@ -876,14 +874,14 @@
                                          style="width: @Model.Stamina%;">
                                     </div>
                                 </div>
-                                <small class="stat-status" id="stamina-status">@(Model.Stamina < 20 ? "很累" : "充分休息")</small>
+                                <small class="stat-status" id="stamina-status">@(Model.Stamina < 20 ? "很累" : Model.Stamina >= 50 ? "充分休息" : "有點累")</small>
                             </div>
 
                             <!-- Cleanliness -->
                             <div class="stat-item">
                                 <div class="stat-item-header">
                                     <i class="bi bi-droplet"></i>
-                                    <span class="stat-name">清潔度</span>
+                                    <span class="stat-name">清潔值</span>
                                     <span class="stat-value" id="cleanliness-value">@Model.Cleanliness%</span>
                                 </div>
                                 <div class="stat-progress-wrapper">
@@ -892,7 +890,7 @@
                                          style="width: @Model.Cleanliness%;">
                                     </div>
                                 </div>
-                                <small class="stat-status" id="cleanliness-status">@(Model.Cleanliness < 20 ? "身體很臭" : "身體乾淨")</small>
+                                <small class="stat-status" id="cleanliness-status">@(Model.Cleanliness < 20 ? "身體很臭" : Model.Cleanliness >= 50 ? "身體乾淨" : "有點臭")</small>
                             </div>
 
                             <!-- Health -->
@@ -908,7 +906,7 @@
                                          style="width: @Model.Health%;">
                                     </div>
                                 </div>
-                                <small class="stat-status" id="health-status">@(Model.Health < 20 ? "生病" : "很健康")</small>
+                                <small class="stat-status" id="health-status">@(Model.Health < 20 ? "生病" : Model.Health >= 50 ? "很健康" : "有點不舒服")</small>
                             </div>
                         </div>
                     </div>
@@ -926,23 +924,22 @@
 
                             <!-- Pet Info Section -->
                             <div class="pet-info-section">
-                                <h3 class="pet-name">@Model.PetName</h3>
-
-                                <!-- Basic Info: Owner & Birthday -->
-                                <div class="pet-details">
-                                    <div class="pet-detail-item">
-                                        <i class="bi bi-person-fill"></i>
-                                        <span>主人：@(ViewBag.UserName ?? "未知")</span>
-                                    </div>
-                                    <div class="pet-detail-item">
-                                        <i class="bi bi-calendar-heart"></i>
-                                        <span>生日：@(ViewBag.RegistrationDate ?? "未知")</span>
-                                    </div>
-                                </div>
-
+                                <h3 class="pet-name" style="display: inline;">@Model.PetName</h3>
                                 <button class="btn btn-sm btn-outline-teal edit-name-btn" data-bs-toggle="modal" data-bs-target="#updateNameModal">
                                     <i class="bi bi-pencil"></i> 修改寵物名稱
                                 </button>
+
+                                <!-- Basic Info: Owner & Birthday -->
+                                <div class="pet-details" style="margin-top: 1rem;">
+                                    <div class="pet-detail-item">
+                                        <i class="bi bi-person-fill"></i>
+                                        <span>主人:@(ViewBag.UserName ?? "未知")</span>
+                                    </div>
+                                    <div class="pet-detail-item">
+                                        <i class="bi bi-calendar-heart"></i>
+                                        <span>生日:@(ViewBag.RegistrationDate ?? "未知")</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -951,10 +948,18 @@
                             <div class="d-flex align-items-start">
                                 <i class="bi bi-check-circle-fill result-icon text-success"></i>
                                 <div>
-                                    <p class="result-text" id="resultText">互動成功！</p>
+                                    <p class="result-text" id="resultText">互動成功!</p>
                                     <div class="stat-change" id="statChange"></div>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Adventure Button (Below Pet Card) -->
+                        <div class="d-flex justify-content-center">
+                            <a href="/MiniGame/Game/Index" class="adventure-go-btn" title="開始冒險遊戲">
+                                <i class="bi bi-rocket-takeoff"></i>
+                                <span>出發冒險 GO!</span>
+                            </a>
                         </div>
                     </div>
 
@@ -971,17 +976,6 @@
                                         <i class="bi bi-cup-straw"></i>
                                     </div>
                                     <div class="interaction-btn-text">餵食</div>
-                                    <div class="interaction-btn-loading" style="display: none;">
-                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                    </div>
-                                </button>
-
-                                <!-- Bath Button -->
-                                <button class="interaction-btn bath-btn" id="bathBtn" onclick="interactWithPet('bath', this)">
-                                    <div class="interaction-btn-icon">
-                                        <i class="bi bi-droplet"></i>
-                                    </div>
-                                    <div class="interaction-btn-text">洗澡</div>
                                     <div class="interaction-btn-loading" style="display: none;">
                                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                                     </div>
@@ -1008,6 +1002,17 @@
                                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                                     </div>
                                 </button>
+
+                                <!-- Bath Button -->
+                                <button class="interaction-btn bath-btn" id="bathBtn" onclick="interactWithPet('bath', this)">
+                                    <div class="interaction-btn-icon">
+                                        <i class="bi bi-droplet"></i>
+                                    </div>
+                                    <div class="interaction-btn-text">洗澡</div>
+                                    <div class="interaction-btn-loading" style="display: none;">
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    </div>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1020,21 +1025,12 @@
                     <div class="card-body">
                         <i class="bi bi-egg fs-1 text-muted mb-3 d-block"></i>
                         <h4 class="text-muted">您還沒有寵物</h4>
-                        <p class="text-muted">請先建立您的第一隻寵物吧！</p>
+                        <p class="text-muted">請先建立您的第一隻寵物吧!</p>
                         <button class="btn btn-teal btn-action mt-3">
                             <i class="bi bi-plus-circle me-2"></i>建立寵物
                         </button>
                     </div>
                 </div>
-            }
-
-            <!-- Bottom Adventure Button -->
-            @if (Model != null)
-            {
-                <a href="/MiniGame/Game/Index" class="adventure-go-btn" title="開始冒險遊戲">
-                    <i class="bi bi-rocket-takeoff"></i>
-                    <span>出發冒險 GO！</span>
-                </a>
             }
         </div>
     </div>
@@ -1106,7 +1102,7 @@
                         {
                             <div class="alert alert-success mt-3 mb-0" role="alert">
                                 <i class="bi bi-gift-fill me-2"></i>
-                                <small>升級獎勵：@Model.PointsGainedLevelUp 點數</small>
+                                <small>升級獎勵:@Model.PointsGainedLevelUp 點數</small>
                             </div>
                         }
                     </div>
@@ -1123,7 +1119,7 @@
     <script src="/MiniGame/js/pet-avatar.js"></script>
 
     <script>
-        // 全局變量：寵物實例
+        // 全局變量:寵物實例
         let petAvatar = null;
 
         // 頁面加載時初始化寵物
@@ -1147,12 +1143,12 @@
             }
         });
 
-        // 互動配置（僅用於前端提示）
+        // 互動配置(僅用於前端提示)
         const interactionConfig = {
-            feed: { icon: 'bi-cup-straw', message: '您給寵物餵食了！', type: 'feed' },
-            bath: { icon: 'bi-droplet', message: '您給寵物洗澡了！', type: 'bath' },
-            play: { icon: 'bi-dice-5', message: '您和寵物一起玩耍了！', type: 'play' },
-            sleep: { icon: 'bi-moon-stars', message: '寵物睡覺了，狀態恢復中...', type: 'sleep' }
+            feed: { icon: 'bi-cup-straw', message: '您給寵物餵食了!', type: 'feed' },
+            bath: { icon: 'bi-droplet', message: '您給寵物洗澡了!', type: 'bath' },
+            play: { icon: 'bi-dice-5', message: '您和寵物一起玩耍了!', type: 'play' },
+            sleep: { icon: 'bi-moon-stars', message: '寵物睡覺了,狀態恢復中...', type: 'sleep' }
         };
 
         const interactionCooldowns = {};
@@ -1184,10 +1180,34 @@
                         petAvatar.playInteraction(action);
                     }
 
-                    // 顯示成功消息
-                    showResult(true, result.message, null);
+                    // 構建數值變化提示
+                    let statChangesText = '';
+                    if (result.statChanges) {
+                        const changes = [];
+                        for (const [key, value] of Object.entries(result.statChanges)) {
+                            const label = getStatLabel(key);
+                            const changeStr = value > 0 ? `+${value}` : value;
+                            changes.push(`${label} ${changeStr}`);
+                        }
+                        statChangesText = changes.join(', ');
+                    }
 
-                    // 更新寵物狀態（檢查pet對象是否存在且有有效數據）
+                    // 檢查是否五值全滿
+                    let bonusText = '';
+                    if (result.pet &&
+                        result.pet.hunger === 100 &&
+                        result.pet.mood === 100 &&
+                        result.pet.stamina === 100 &&
+                        result.pet.cleanliness === 100 &&
+                        result.pet.health === 100) {
+                        bonusText = '<div style="color: #ffa500; font-weight: bold; margin-top: 0.5rem;">🎉 完美狀態! 獲得 100 經驗值 + 100 會員點數</div>';
+                    }
+
+                    // 顯示成功消息
+                    const fullMessage = result.message + (statChangesText ? ' (' + statChangesText + ')' : '');
+                    showResult(true, fullMessage, result.statChanges, bonusText);
+
+                    // 更新寵物狀態(檢查pet對象是否存在且有有效數據)
                     if (result.pet && typeof result.pet.hunger === 'number') {
                         updatePetStats(result.pet);
 
@@ -1202,17 +1222,17 @@
                             });
                         }
                     } else {
-                        // 如果後端沒有返回pet數據，重新加載頁面以獲取最新狀態
+                        // 如果後端沒有返回pet數據,重新加載頁面以獲取最新狀態
                         console.log('Pet data not returned, reloading page...');
                         setTimeout(() => window.location.reload(), 1000);
                     }
 
                 } else {
-                    showResult(false, result.message);
+                    showResult(false, result.message, null, '');
                 }
 
             } catch (error) {
-                showResult(false, '互動失敗，請重試');
+                showResult(false, '互動失敗,請重試', null, '');
                 console.error('Interaction error:', error);
             } finally {
                 button.disabled = false;
@@ -1236,7 +1256,7 @@
             updateStatusDescription('cleanliness', pet.cleanliness);
             updateStatusDescription('health', pet.health);
 
-            // 更新經驗值和等級（如果後端有返回）
+            // 更新經驗值和等級(如果後端有返回)
             if (typeof pet.experience === 'number' && typeof pet.experienceToNextLevel === 'number') {
                 updateExperienceBar(pet.experience, pet.experienceToNextLevel);
             }
@@ -1264,22 +1284,21 @@
         }
 
         // 獲取狀態描述文字
-        // 商業規則：屬性值 < 20 顯示負面狀態，否則顯示正面狀態
         function getStatusDescription(attrName, attrValue) {
             const statusMap = {
-                hunger: { low: '飢餓', high: '飽食' },
-                mood: { low: '難過', high: '開心' },
-                stamina: { low: '很累', high: '充分休息' },
-                cleanliness: { low: '身體很臭', high: '身體乾淨' },
-                health: { low: '生病', high: '很健康' }
+                hunger: { low: '飢餓', mid: '有點餓', high: '飽食' },
+                mood: { low: '難過', mid: '普通', high: '開心' },
+                stamina: { low: '很累', mid: '有點累', high: '充分休息' },
+                cleanliness: { low: '身體很臭', mid: '有點臭', high: '身體乾淨' },
+                health: { low: '生病', mid: '有點不舒服', high: '很健康' }
             };
 
-            const threshold = 20;
             const status = statusMap[attrName];
-
             if (!status) return '';
 
-            return attrValue < threshold ? status.low : status.high;
+            if (attrValue < 20) return status.low;
+            if (attrValue < 50) return status.mid;
+            return status.high;
         }
 
         // 更新進度條
@@ -1292,7 +1311,7 @@
             if (bar) {
                 bar.style.width = value + '%';
 
-                // 更新顏色（使用新的stat-progress-bar類名）
+                // 更新顏色(使用新的stat-progress-bar類名)
                 bar.className = 'stat-progress-bar';
                 if (value < 20) {
                     bar.classList.add('bg-danger');
@@ -1312,10 +1331,10 @@
         // 獲取狀態中文標籤
         function getStatLabelText(statName) {
             const labels = {
-                'Hunger': '飢餓度',
-                'Mood': '心情',
-                'Stamina': '體力',
-                'Cleanliness': '清潔度',
+                'Hunger': '飢餓值',
+                'Mood': '心情值',
+                'Stamina': '體力值',
+                'Cleanliness': '清潔值',
                 'Health': '健康值'
             };
             return labels[statName] || statName;
@@ -1331,7 +1350,6 @@
             if (experienceBar && requiredExp > 0) {
                 const percentage = (currentExp * 100.0 / requiredExp);
                 experienceBar.style.width = percentage.toFixed(2) + '%';
-                // 新的compact-exp-bar不顯示百分比文字
             }
 
             if (experienceText) {
@@ -1364,13 +1382,13 @@
                 }
             });
 
-            // 如果寵物SVG存在，更新寵物的等級
+            // 如果寵物SVG存在,更新寵物的等級
             if (petAvatar) {
                 petAvatar.updateStats({ level: level });
             }
         }
 
-        function showResult(success, message, statChanges) {
+        function showResult(success, message, statChanges, bonusHtml) {
             const resultDiv = document.getElementById('interactionResult');
             const resultText = document.getElementById('resultText');
             const statChange = document.getElementById('statChange');
@@ -1391,6 +1409,7 @@
             resultText.textContent = message;
 
             // Update stat changes
+            let changeHtml = '';
             if (statChanges) {
                 let statsHtml = '<div style="margin-top: 0.5rem;">';
                 for (const [stat, change] of Object.entries(statChanges)) {
@@ -1402,24 +1421,30 @@
                     </div>`;
                 }
                 statsHtml += '</div>';
-                statChange.innerHTML = statsHtml;
+                changeHtml = statsHtml;
             }
+
+            if (bonusHtml) {
+                changeHtml += bonusHtml;
+            }
+
+            statChange.innerHTML = changeHtml;
 
             // Show result
             resultDiv.classList.add('show');
 
-            // Auto-hide after 4 seconds
+            // Auto-hide after 5 seconds
             setTimeout(() => {
                 resultDiv.classList.remove('show');
-            }, 4000);
+            }, 5000);
         }
 
         function getStatLabel(stat) {
             const labels = {
-                hunger: '飢餓度',
-                mood: '心情',
-                stamina: '體力',
-                cleanliness: '清潔度',
+                hunger: '飢餓值',
+                mood: '心情值',
+                stamina: '體力值',
+                cleanliness: '清潔值',
                 health: '健康值',
                 experience: '經驗值'
             };
@@ -1486,14 +1511,11 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Update UI - update the pet name immediately using correct selector
+                    // Update UI - find the h3 with pet name
                     const petNameElement = document.querySelector('.pet-name');
                     if (petNameElement) {
                         petNameElement.textContent = result.pet.petName;
                     }
-
-                    // Update the name in the modal input for next time
-                    document.getElementById('newPetName').value = result.pet.petName;
 
                     // Show success message
                     showNameUpdateAlert('success', result.message);
@@ -1509,7 +1531,7 @@
                 }
             } catch (error) {
                 console.error('Update name error:', error);
-                showNameUpdateAlert('danger', '名稱更新失敗，請重試');
+                showNameUpdateAlert('danger', '名稱更新失敗,請重試');
             } finally {
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>確認修改';

@@ -106,7 +106,7 @@ namespace GamiPort.Areas.MiniGame.Controllers
 		{
 			if (User.Identity?.IsAuthenticated != true)
 			{
-				return Unauthorized();
+				return Json(new { success = false, message = "未授權的用戶" });
 			}
 
 			try
@@ -119,8 +119,7 @@ namespace GamiPort.Areas.MiniGame.Controllers
 
 				if (userId == 0)
 				{
-					TempData["ErrorMessage"] = "未授權的用戶";
-					return RedirectToAction("Index");
+					return Json(new { success = false, message = "未授權的用戶" });
 				}
 
 				// 啟動遊戲（自動計算關卡、扣除遊戲次數、創建遊戲記錄）
@@ -128,23 +127,30 @@ namespace GamiPort.Areas.MiniGame.Controllers
 
 				if (success)
 				{
+					// 獲取剩餘次數
+					int remainingPlays = await _gamePlayService.GetUserRemainingPlaysAsync(userId);
+
 					// 儲存遊戲 ID 和關卡到 TempData 供遊戲結束時使用
 					TempData["CurrentPlayId"] = playId;
 					TempData["CurrentLevel"] = level;
-					TempData["SuccessMessage"] = message;
-					return RedirectToAction("Index", new { selectedLevel = level });
+
+					return Json(new {
+						success = true,
+						message = message,
+						sessionId = playId,
+						level = level,
+						remainingPlays = remainingPlays
+					});
 				}
 				else
 				{
-					TempData["ErrorMessage"] = message;
-					return RedirectToAction("Index");
+					return Json(new { success = false, message = message });
 				}
 			}
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "啟動遊戲時發生錯誤");
-				TempData["ErrorMessage"] = "啟動遊戲失敗，請稍後重試";
-				return RedirectToAction("Index");
+				return Json(new { success = false, message = "啟動遊戲失敗，請稍後重試" });
 			}
 		}
 
