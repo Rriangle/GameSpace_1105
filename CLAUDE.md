@@ -15,10 +15,16 @@ Both projects share the **GameSpacedatabase** SQL Server database and are organi
 **Critical**: The database is the single source of truth. Schema modifications via EF Migrations are **strictly prohibited**.
 
 - **Database**: GameSpacedatabase on SQL Server (SQLEXPRESS)
+- **Server**: DESKTOP-8HQIS1S\SQLEXPRESS (or similar local instance)
 - **Connection String**: Located in `appsettings.json` → `ConnectionStrings:GameSpace` (or `GameSpacedatabase` or `DefaultConnection`)
 - **DbContext**: `GameSpacedatabaseContext` (in `Models/` for both projects)
 - **Total Tables**: 103 tables across all areas
 - **Schema Files**: Reference files in `schema/` directory (for AI reference only)
+- **Database Priority**: When implementing features, ALWAYS:
+  1. Connect to actual SQL Server database to verify schema
+  2. Check seed data for actual values and constraints
+  3. Verify field types, lengths, nullability, FK/PK/UK/CHECK/Identity
+  4. Align 100% with database structure (no assumptions)
 
 ### MiniGame Area Core Tables (20 tables)
 - Wallet: `User_Wallet`, `WalletHistory`, `CouponType`, `Coupon`, `EVoucherType`, `EVoucher`, `EVoucherToken`, `EVoucherRedeemLog`
@@ -126,9 +132,19 @@ No automated test projects currently exist. Manual testing via browser required.
 
 ## Area-Based Development Rules
 
-### Critical Constraints
+### Critical Constraints (STRICT ENFORCEMENT)
 1. **Zero Cross-Boundary Modification**: When working in an Area (e.g., `Areas/MiniGame/`), you may ONLY modify files within that Area directory
+   - For GamiPort MiniGame work: `C:\Users\n2029\Desktop\work-1105\GamiPort\GamiPort\Areas\MiniGame`
+   - **PAUSE-AND-ASK Mode**: If you must modify files outside your Area:
+     - STOP all modifications immediately
+     - Report: Current situation and why cross-boundary changes are needed
+     - Provide: Solution alternatives with pros/cons
+     - List: Exact file paths that need modification
+     - Show: Unified diff blocks for each proposed change
+     - **DO NOT PROCEED** until explicit approval is granted
+
 2. **Program.cs Exception**: Only add minimal required registrations for your Area; do not modify other Area configurations
+
 3. **Shared Resources**: Do NOT modify:
    - `wwwroot/lib/sb-admin/` (GameSpace)
    - `wwwroot/lib/bootstrap/`
@@ -137,9 +153,18 @@ No automated test projects currently exist. Manual testing via browser required.
 
 ### MiniGame Area Specifics
 - **Backend (GameSpace)**: `Areas/MiniGame/**` - Admin controllers, services, views (COMPLETED)
+  - 24 controllers, 94 services fully implemented
+  - Reference backend code for business logic patterns
 - **Frontend (GamiPort)**: `Areas/MiniGame/**` - Client-facing features (IN PROGRESS)
+  - 14 functions required (13 core + 1 bonus: sign-in rule preview)
+  - Pet interaction page with "Start Adventure" button in bottom-right
+  - Adventure game inspired by Chrome dinosaur runner
 - **Allowed Controllers**: Pattern `Admin*Controller` for backend
 - **Sidebar Navigation**: Two-level hierarchy via `_Sidebar.cshtml`
+- **Static Assets**: Must be placed in `Areas/MiniGame/wwwroot/`
+  - Images: `PetBackgroundCostSettings表格_種子資料_圖片/`
+  - JavaScript: `js/` (including `pet-avatar.js`)
+  - Unity builds: `unity/{PetInteraction,PetAdventure}/Build/`
 
 ### Recommended Area Structure
 ```
@@ -201,8 +226,12 @@ Areas/YourArea/
 ### Frontend Technology Stack (GamiPort MiniGame)
 - **Vue.js 3**: Via CDN, components in `Areas/MiniGame/wwwroot/js/vue-components/`
 - **Unity WebGL**: Builds in `Areas/MiniGame/wwwroot/unity/{PetInteraction,PetAdventure}/Build/`
-- **Progressive Enhancement**: Razor Views provide initial HTML, Vue enhances interactivity
+  - Pet Adventure game inspired by Chrome dinosaur runner game
+  - WebGL output must be placed in Area-specific wwwroot
+- **Pet Avatar SVG Renderer**: `pet-avatar.js` for dynamic pet visualization
+- **Progressive Enhancement**: Razor Views provide initial HTML, Vue/JS enhances interactivity
 - **Zero Cross-Boundary**: All frontend assets must stay within `Areas/MiniGame/wwwroot/`
+- **Anti-Forgery Tokens**: Always include `@Html.AntiForgeryToken()` in forms and AJAX POST requests
 
 ## Common Patterns
 
@@ -245,6 +274,47 @@ Batch operations limit: ≤ 1000 records. Write operations should be idempotent 
 ### Encoding
 **All files must be UTF-8 with BOM** (especially for Chinese content).
 
+### Code Generation Best Practices
+**Critical Lessons from Recent Fixes:**
+
+1. **Unique Code Generation** (Coupons/Vouchers):
+   - ❌ BAD: `new Random().Next(100000, 999999)` - High collision risk
+   - ✅ GOOD: GUID-based with retry mechanism
+   ```csharp
+   private async Task<string> GenerateUniqueCodeAsync()
+   {
+       int maxRetries = 10;
+       for (int i = 0; i < maxRetries; i++)
+       {
+           var code = $"PREFIX-{DateTime.Now:yyyyMM}-{Guid.NewGuid():N}".Substring(0, 30);
+           if (!await _context.Codes.AnyAsync(c => c.Code == code))
+               return code;
+           _logger.LogWarning("Code collision, retrying: {Code}, Attempt={Attempt}", code, i + 1);
+       }
+       throw new Exception("Failed to generate unique code after retries");
+   }
+   ```
+
+2. **AJAX Response Handling**:
+   - Always check for complete data structures before updating UI
+   - Implement fallback mechanisms (e.g., page reload) when data is incomplete
+   ```javascript
+   if (result.pet && typeof result.pet.hunger === 'number') {
+       updatePetStats(result.pet);
+   } else {
+       console.log('Pet data incomplete, reloading page...');
+       setTimeout(() => window.location.reload(), 1000);
+   }
+   ```
+
+3. **Image Paths**:
+   - Always use absolute paths from Area root: `/MiniGame/subfolder/image.png`
+   - Background images: `background-image: url('/MiniGame/...')` not `background-color`
+
+4. **Anti-Forgery Protection**:
+   - Include token in forms: `@Html.AntiForgeryToken()`
+   - Pass in AJAX: `__RequestVerificationToken=${encodeURIComponent(token)}`
+
 ## Configuration Management
 
 ### SystemSettings Table (Dynamic Configuration)
@@ -267,12 +337,37 @@ Example keys:
 5. **SignalR Cross-Origin**: GamiPort acts as SignalR host for both frontend and backend clients
 6. **Time Zone**: Standardized on `TimeZones.Taipei` via `IAppClock` / `AppClock`
 
+## UI/UX Standards (GamiPort MiniGame)
+
+### Design System
+- **Overall Style**: Bahamut-inspired layout structure
+- **MiniGame Color Scheme**: Light blue modern palette (淡藍現代系配色)
+- **Primary Color**: `#17a2b8` (teal/cyan) for main actions
+- **Neutral Backgrounds**: `#f0f4f8`, `#f9f9f9` for cards and sections
+- **Border Radius**: 8px-24px for modern rounded corners
+- **Shadows**: Subtle `0 2px 8px rgba(0,0,0,0.1)` for depth
+
+### Component Consistency
+- **Buttons**: Clear hover/active states, consistent padding (8px-16px)
+- **Cards**: White background, rounded corners, subtle shadows
+- **Forms**: Bootstrap-based with custom styling, clear validation feedback
+- **Loading States**: Always show loading indicators for async operations
+- **Error Messages**: User-friendly Chinese messages with context
+
+### Accessibility & Responsiveness
+- Keyboard navigation support where applicable
+- Chinese text readability (UTF-8 with BOM)
+- Responsive design (mobile-friendly layouts)
+- Clear visual feedback for all interactions
+
 ## Code Quality Standards
 
 1. **File Size**: Commits ≤ 3 files or ≤ 400 lines per commit (CI enforcement)
 2. **Constraints**: All DB constraints (PK/FK/UNIQUE/CHECK/DEFAULT) must be honored
 3. **Soft Delete**: Many tables use `IsDeleted`, `DeletedAt`, `DeletedBy`, `DeleteReason` pattern
 4. **Response Caching**: Disabled globally via `ResponseCacheAttribute` to prevent stale HTML after login
+5. **Zero Compilation Errors**: Every commit must build successfully with `dotnet build` (0 errors tolerated)
+6. **No Placeholder Code**: Never use TODO, "略", or incomplete implementations in production code
 
 ## Troubleshooting
 
@@ -311,17 +406,59 @@ See `schema/` directory for detailed specifications:
 - `後台架構分析文件.md` - Backend architecture analysis
 - `SQL_Server_連線操作完整手冊_AI適用.md` - SQL Server operations manual
 
+## Development Workflow
+
+### Documentation Requirements
+When working on MiniGame Area features, maintain these files in `Areas/MiniGame/`:
+- **RUNLOG.md**: Chronological log (Taipei timezone) of "what was done, why, next steps"
+- **HANDOFF.md**: Handoff document for continuation with TO-DO list
+- **CHECKLIST.md**: Checkbox-style verification list for DB/requirements alignment
+
+### Development Sequence (MiniGame Area)
+1. **Views First**: Start with Razor views, UI/UX implementation
+2. **Models Second**: Create ViewModels/DTOs aligned with DB schema
+3. **Controllers/Services**: Implement business logic
+4. **Testing**: Manual browser testing (no automated tests yet)
+5. **Git Backup**: Commit frequently with descriptive messages
+
+### Reading Hierarchy (When Implementing Features)
+When conflicts arise, follow this priority order:
+1. **SQL Server Database** (actual schema and seed data)
+2. **Backend Architecture** (GameSpace MiniGame Area existing code)
+3. **schema/README_合併版.md** Section 3: Frontend Requirements
+4. **schema/前台開發藍圖文件.md** - Frontend blueprint
+5. Other schema documentation files
+
+### Progress Tracking
+- Start each session by reading RUNLOG.md/HANDOFF.md to continue from last checkpoint
+- Update all three documentation files before ending work session
+- Ensure "zero-guessing" continuation for next session
+
 ## Git Workflow
 
-**Current Branch**: `dev`
+**Current Branch**: `dev` (DO NOT create new branches)
 **Main Branch**: (Not specified - likely `main` or `master`)
 
-When committing:
-- Follow conventional commits format
-- Include "why" not just "what" in messages
-- Append footer:
-  ```
-  🤖 Generated with [Claude Code](https://claude.com/claude-code)
+### Commit Strategy
+- Commit frequently after completing small milestones
+- Build must pass with 0 errors before committing
+- Include timestamp and milestone description in commit message
 
-  Co-Authored-By: Claude <noreply@anthropic.com>
-  ```
+### Commit Message Format
+```
+feat/fix(Area Name): Brief description in Chinese
+
+## Detailed changes (if needed)
+- Change 1
+- Change 2
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**Examples:**
+```
+feat(GamiPort MiniGame): 實作簽到規則預覽功能
+fix(GamiPort MiniGame): 修復優惠券兌換失敗問題
+```
