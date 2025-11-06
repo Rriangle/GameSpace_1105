@@ -7,9 +7,9 @@
 
 <div class="container-fluid px-4">
 	<!-- Anti-Forgery Token -->
-	<form id="antiForgeryForm" style="display:none;">
+	<div id="antiForgeryTokenContainer">
 		@Html.AntiForgeryToken()
-	</form>
+	</div>
 
 	<h1 class="mt-4 text-info">
 		<i class="fas fa-exchange-alt me-2"></i>商城優惠券兌換
@@ -232,7 +232,16 @@
 				this.disabled = true;
 				this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>兌換中...';
 
-				const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+				// 獲取CSRF Token並驗證
+				const tokenInput = document.querySelector('#antiForgeryTokenContainer input[name="__RequestVerificationToken"]');
+				if (!tokenInput || !tokenInput.value) {
+					console.error('CSRF Token not found!');
+					showErrorModal('系統錯誤', '安全驗證失敗，請重新整理頁面後再試');
+					this.disabled = false;
+					this.innerHTML = '<i class="fas fa-shopping-cart me-1"></i>立即兌換';
+					return;
+				}
+				const token = tokenInput.value;
 				fetch('@Url.Action("ExchangeForCoupon", "Wallet")', {
 					method: 'POST',
 					headers: {
@@ -295,7 +304,16 @@
 				this.disabled = true;
 				this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>兌換中...';
 
-				const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+				// 獲取CSRF Token並驗證
+				const tokenInput = document.querySelector('#antiForgeryTokenContainer input[name="__RequestVerificationToken"]');
+				if (!tokenInput || !tokenInput.value) {
+					console.error('CSRF Token not found!');
+					showErrorModal('系統錯誤', '安全驗證失敗，請重新整理頁面後再試');
+					this.disabled = false;
+					this.innerHTML = '<i class="fas fa-shopping-cart me-1"></i>立即兌換';
+					return;
+				}
+				const token = tokenInput.value;
 				fetch('@Url.Action("ExchangeForEVoucher", "Wallet")', {
 					method: 'POST',
 					headers: {

@@ -73,7 +73,7 @@ namespace GamiPort.Areas.MiniGame.Services
 				var coupons = await _context.Coupons
 					.Include(c => c.CouponType)
 					.AsNoTracking()
-					.Where(c => c.UserId == userId && !c.IsDeleted)
+					.Where(c => c.UserId == userId && !c.IsDeleted && c.CouponCode.StartsWith("CPN-"))
 					.ToListAsync();
 
 				// 應用模糊搜尋 (OR 邏輯: 優惠券代碼 OR 優惠券類型名稱)
@@ -158,6 +158,7 @@ namespace GamiPort.Areas.MiniGame.Services
 
 		/// <summary>
 		/// 獲取用戶未使用的優惠券數量
+		/// 僅計算 CPN- 開頭的商城優惠券
 		/// </summary>
 		public async Task<int> GetUnusedCouponCountAsync(int userId)
 		{
@@ -165,7 +166,7 @@ namespace GamiPort.Areas.MiniGame.Services
 			{
 				return await _context.Coupons
 					.AsNoTracking()
-					.CountAsync(c => c.UserId == userId && !c.IsUsed && !c.IsDeleted);
+					.CountAsync(c => c.UserId == userId && !c.IsUsed && !c.IsDeleted && c.CouponCode.StartsWith("CPN-"));
 			}
 			catch (Exception ex)
 			{
@@ -327,6 +328,21 @@ namespace GamiPort.Areas.MiniGame.Services
 				}
 
 				_context.Coupons.Update(coupon);
+
+				// 7. 添加WalletHistory記錄 - 優惠券使用
+				var couponTypeName = coupon.CouponType?.Name ?? "優惠券";
+				var walletHistory = new WalletHistory
+				{
+					UserId = userId,
+					ChangeType = "Coupon",
+					PointsChanged = -1,
+					ItemCode = coupon.CouponCode,
+					Description = $"使用優惠券: {couponTypeName}",
+					ChangeTime = usedTime,
+					IsDeleted = false
+				};
+				_context.WalletHistories.Add(walletHistory);
+
 				await _context.SaveChangesAsync();
 				await transaction.CommitAsync();
 
@@ -423,6 +439,21 @@ namespace GamiPort.Areas.MiniGame.Services
 
 				_context.Evouchers.Update(evoucher);
 				_context.EvoucherRedeemLogs.Add(redeemLog);
+
+				// 8. 添加WalletHistory記錄 - 電子禮券核銷
+				var evoucherTypeName = evoucher.EvoucherType?.Name ?? "電子禮券";
+				var walletHistory = new WalletHistory
+				{
+					UserId = userId,
+					ChangeType = "EVoucher",
+					PointsChanged = -1,
+					ItemCode = evoucher.EvoucherCode,
+					Description = $"核銷電子禮券: {evoucherTypeName}",
+					ChangeTime = usedTime,
+					IsDeleted = false
+				};
+				_context.WalletHistories.Add(walletHistory);
+
 				await _context.SaveChangesAsync();
 				await transaction.CommitAsync();
 
@@ -797,15 +828,25 @@ namespace GamiPort.Areas.MiniGame.Services
 
 		/// <summary>
 		/// 獲取所有可兌換的優惠券類型
+		/// 僅返回有對應 CPN- 開頭的優惠券實例的類型
 		/// </summary>
 		public async Task<IEnumerable<CouponType>> GetAvailableCouponTypesAsync()
 		{
 			try
 			{
 				var nowUtc8 = _appClock.ToAppTime(_appClock.UtcNow);
+
+				// 取得所有有 CPN- 開頭的優惠券的類型 ID
+				var validCouponTypeIds = await _context.Coupons
+					.AsNoTracking()
+					.Where(c => c.CouponCode.StartsWith("CPN-") && !c.IsDeleted)
+					.Select(c => c.CouponTypeId)
+					.Distinct()
+					.ToListAsync();
+
 				return await _context.CouponTypes
 					.AsNoTracking()
-					.Where(ct => !ct.IsDeleted && ct.ValidTo >= nowUtc8)
+					.Where(ct => !ct.IsDeleted && ct.ValidTo >= nowUtc8 && validCouponTypeIds.Contains(ct.CouponTypeId))
 					.OrderBy(ct => ct.PointsCost)
 					.ToListAsync();
 			}

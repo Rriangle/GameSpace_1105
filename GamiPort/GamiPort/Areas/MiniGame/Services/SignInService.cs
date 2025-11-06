@@ -144,6 +144,7 @@ namespace GamiPort.Areas.MiniGame.Services
 			try
 			{
 				var utcNow = _appClock.UtcNow;
+				var appNowForHistory = _appClock.ToAppTime(utcNow);
 
 				// 1. 建立簽到記錄
 				var signInStat = new UserSignInStat
@@ -173,6 +174,59 @@ namespace GamiPort.Areas.MiniGame.Services
 					await _context.SaveChangesAsync();
 				}
 
+				// 3. 添加WalletHistory記錄 - 點數獎勵
+				if (signInRule.Points > 0 && wallet != null)
+				{
+					// 決定簽到類型和描述
+					string itemCode;
+					string itemName;
+
+					if (nextSignInDay % 30 == 0 && nextSignInDay > 0)
+					{
+						itemCode = "SIGNIN-MONTHLY-PERFECT";
+						itemName = "全勤獎勵";
+					}
+					else if (nextSignInDay % 7 == 0 && nextSignInDay > 0)
+					{
+						itemCode = "SIGNIN-CONSECUTIVE-7";
+						itemName = "連續7天獎勵";
+					}
+					else
+					{
+						itemCode = "SIGNIN-DAILY";
+						itemName = "每日簽到獎勵";
+					}
+
+					var pointHistory = new WalletHistory
+					{
+						UserId = userId,
+						ChangeType = "Point",
+						PointsChanged = signInRule.Points,
+						ItemCode = itemCode,
+						Description = $"{itemName} (第{nextSignInDay}天)",
+						ChangeTime = appNowForHistory,
+						IsDeleted = false
+					};
+					_context.WalletHistories.Add(pointHistory);
+				}
+
+				// 4. 添加WalletHistory記錄 - 優惠券獎勵（如果有）
+				if (signInRule.HasCoupon && !string.IsNullOrEmpty(signInRule.CouponTypeCode))
+				{
+					var couponHistory = new WalletHistory
+					{
+						UserId = userId,
+						ChangeType = "Coupon",
+						PointsChanged = 1,
+						ItemCode = signInRule.CouponTypeCode,
+						Description = $"簽到獎勵優惠券 (第{nextSignInDay}天)",
+						ChangeTime = appNowForHistory,
+						IsDeleted = false
+					};
+					_context.WalletHistories.Add(couponHistory);
+				}
+
+				await _context.SaveChangesAsync();
 				await transaction.CommitAsync();
 
 				// 更新寵物經驗值並觸發升級檢查（在事務外執行）
