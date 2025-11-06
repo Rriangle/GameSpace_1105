@@ -110,17 +110,14 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				// 獲取優惠券列表（支持模糊搜尋）
 				var coupons = await _walletService.GetUserCouponsAsync(userId, search);
 
-				// 構建視圖數據
-				var viewData = new
-				{
-					Coupons = coupons,
-					SearchTerm = search,
-					TotalCount = coupons.Count(),
-					UnusedCount = coupons.Count(c => !c.IsUsed),
-					UsedCount = coupons.Count(c => c.IsUsed)
-				};
+				// 構建視圖數據（使用 ViewBag）
+				ViewBag.Coupons = coupons.ToList();
+				ViewBag.SearchTerm = search;
+				ViewBag.TotalCount = coupons.Count();
+				ViewBag.UnusedCount = coupons.Count(c => !c.IsUsed);
+				ViewBag.UsedCount = coupons.Count(c => c.IsUsed);
 
-				return View(viewData);
+				return View();
 			}
 			catch (Exception ex)
 			{

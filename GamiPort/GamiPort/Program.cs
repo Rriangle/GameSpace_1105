@@ -33,6 +33,7 @@ using GamiPort.Models;                     // GameSpacedatabaseContext（業務�
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;       // 只用 IPasswordHasher<User> / PasswordHasher<User>（升級舊明文）
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;  // ★ PhysicalFileProvider（Area 靜態檔案支援）
 // Program.cs 最上面加（若尚未有）
 
 
@@ -242,7 +243,21 @@ namespace GamiPort
 			}
 
 			app.UseHttpsRedirection();
-			app.UseStaticFiles();
+			app.UseStaticFiles();  // 預設根目錄 wwwroot
+
+			// ============================================================
+			// ★ MiniGame Area 靜態檔案支援
+			// 目的：讓 /MiniGame/stamps/*.png、/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/*.png 等能正確載入
+			// 映射：/MiniGame/* → Areas/MiniGame/wwwroot/*
+			// 範例：/MiniGame/stamps/SIGNIN-STAMP.png → Areas/MiniGame/wwwroot/stamps/SIGNIN-STAMP.png
+			// ============================================================
+			app.UseStaticFiles(new StaticFileOptions
+			{
+				FileProvider = new PhysicalFileProvider(
+					Path.Combine(builder.Environment.ContentRootPath, "Areas", "MiniGame", "wwwroot")),
+				RequestPath = "/MiniGame"
+			});
+
 			app.UseRouting();
 
 			// ✅ CORS 要在 Routing 後、Auth 前

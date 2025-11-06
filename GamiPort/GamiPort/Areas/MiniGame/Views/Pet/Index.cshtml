@@ -382,14 +382,21 @@
 
                                 <!-- Experience Bar -->
                                 <div class="mb-4">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <small class="text-muted">經驗值</small>
-                                        <small class="text-muted fw-bold">@Model.Experience / @(Model.ExperienceToNextLevel ?? 0)</small>
-                                    </div>
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar"
-                                             style="width: @((Model.ExperienceToNextLevel > 0 ? (Model.Experience * 100.0 / Model.ExperienceToNextLevel.Value) : 0).ToString("F2"))%; background: linear-gradient(90deg, #17a2b8 0%, #0d9488 100%);"
-                                             role="progressbar">
+                                    <div class="stat-card">
+                                        <div class="stat-label">
+                                            <i class="bi bi-star-fill me-2"></i>經驗值
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar"
+                                                 style="width: @((Model.ExperienceToNextLevel > 0 ? (Model.Experience * 100.0 / Model.ExperienceToNextLevel.Value) : 0).ToString("F2"))%; background: linear-gradient(90deg, #17a2b8 0%, #0d9488 100%);"
+                                                 role="progressbar">
+                                                @((Model.ExperienceToNextLevel > 0 ? (Model.Experience * 100.0 / Model.ExperienceToNextLevel.Value) : 0).ToString("F0"))%
+                                            </div>
+                                        </div>
+                                        <div class="text-center mt-1">
+                                            <small class="stat-description">
+                                                @Model.Experience / @(Model.ExperienceToNextLevel ?? 0)
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -714,7 +721,7 @@
 }
 
     <!-- 引入可愛寵物 SVG 渲染器 -->
-    <script src="~/Areas/MiniGame/wwwroot/js/pet-avatar.js"></script>
+    <script src="/MiniGame/js/pet-avatar.js"></script>
 
     <script>
         // 全局變量：寵物實例

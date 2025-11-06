@@ -307,7 +307,7 @@
             </div>
 
             <!-- Preview Card -->
-            <div class="preview-card" id="previewCard" style="background-image: url('@($"/MiniGame/backgrounds/{currentBackgroundColor}.png")'); background-size: cover; background-position: center;">
+            <div class="preview-card" id="previewCard" style="background-image: url('@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")'); background-size: cover; background-position: center;">
                 <div class="preview-header">預覽</div>
                 <div class="preview-pet-avatar" style="background-color: @currentSkinColor; border-color: white;">
                     <i class="bi bi-heart-fill text-white"></i>
@@ -410,7 +410,7 @@
             {
                 var isLastItem = bg.SettingId == backgrounds.Max(b => b.SettingId);
                 var isExpired = isLastItem; // 最後一個為限時活動限定已失效
-                var imagePath = $"/MiniGame/backgrounds/{bg.BackgroundCode}.png";
+                var imagePath = $"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{bg.BackgroundCode}.png";
                 <text>{
                     code: '@bg.BackgroundCode',
                     name: '@bg.BackgroundName@(isExpired ? " (限時活動限定已失效)" : "")',
@@ -423,7 +423,7 @@
 
         let selectedSkinColor = '@currentSkinColor';
         let selectedBackgroundColor = '@currentBackgroundColor';
-        let selectedBackgroundImage = '@($"/MiniGame/backgrounds/{currentBackgroundColor}.png")';
+        let selectedBackgroundImage = '@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")';
 
         function initializeSkinColors() {
             const grid = document.getElementById('skinColorGrid');
