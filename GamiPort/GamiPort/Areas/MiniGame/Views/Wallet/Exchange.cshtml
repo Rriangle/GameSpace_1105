@@ -1,5 +1,5 @@
 @{
-	ViewData["Title"] = "點數兌換";
+	ViewData["Title"] = "商城優惠券兌換";
 	var userPoints = (int)((Dictionary<string, object>)Model)["UserPoints"];
 	var couponTypes = (IEnumerable<GamiPort.Models.CouponType>)((Dictionary<string, object>)Model)["CouponTypes"];
 	var evoucherTypes = (IEnumerable<GamiPort.Models.EvoucherType>)((Dictionary<string, object>)Model)["EVoucherTypes"];
@@ -12,11 +12,11 @@
 	</form>
 
 	<h1 class="mt-4 text-info">
-		<i class="fas fa-exchange-alt me-2"></i>點數兌換
+		<i class="fas fa-exchange-alt me-2"></i>商城優惠券兌換
 	</h1>
 	<ol class="breadcrumb mb-4">
 		<li class="breadcrumb-item"><a asp-action="Index">錢包首頁</a></li>
-		<li class="breadcrumb-item active">點數兌換</li>
+		<li class="breadcrumb-item active">商城優惠券兌換</li>
 	</ol>
 
 	<!-- 當前點數顯示 -->

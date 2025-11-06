@@ -1,5 +1,6 @@
 @model Dictionary<string, object>
 @using GamiPort.Areas.MiniGame.Helpers
+@inject GamiPort.Infrastructure.Time.IAppClock AppClock
 @{
     ViewData["Title"] = "我的錢包";
 
@@ -7,7 +8,7 @@
     var points = Model.ContainsKey("CurrentPoints") ? Convert.ToInt32(Model["CurrentPoints"]) : 0;
     var couponCount = Model.ContainsKey("UnusedCouponCount") ? Convert.ToInt32(Model["UnusedCouponCount"]) : 0;
     var eVoucherCount = Model.ContainsKey("UnusedEVoucherCount") ? Convert.ToInt32(Model["UnusedEVoucherCount"]) : 0;
-    var lastUpdated = DateTime.UtcNow;
+    var lastUpdated = AppClock.ToAppTime(AppClock.UtcNow);
 }
 
 @if (User.Identity?.IsAuthenticated == true)

@@ -129,6 +129,11 @@
             text-align: center;
             border: 2px solid #e8f0f4;
             margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
 
         .preview-header {
@@ -136,6 +141,12 @@
             font-weight: 700;
             margin-bottom: 1.5rem;
             font-size: 1.125rem;
+            background: rgba(255, 255, 255, 0.9);
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
 
         .preview-pet-avatar {
@@ -155,7 +166,13 @@
             font-weight: 700;
             color: #2c3e50;
             font-size: 1.25rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
 
         .info-banner {
@@ -295,8 +312,12 @@
                     </div>
                 </div>
                 <div class="text-end">
-                    <small class="text-muted d-block">您的點數</small>
-                    <h4 class="mb-0 text-teal fw-bold" id="userPointsDisplay">@userPoints</h4>
+                    <div style="background: linear-gradient(135deg, #ffa500 0%, #ff9f43 100%); color: white; padding: 0.75rem 1.25rem; border-radius: 16px; box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);">
+                        <div style="font-size: 0.75rem; font-weight: 600; opacity: 0.9; margin-bottom: 0.25rem;">
+                            <i class="bi bi-coin me-1"></i>會員點數餘額
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: bold;" id="userPointsDisplay">@userPoints</div>
+                    </div>
                 </div>
             </div>
 
@@ -307,7 +328,7 @@
             </div>
 
             <!-- Preview Card -->
-            <div class="preview-card" id="previewCard" style="background-image: url('@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")'); background-size: cover; background-position: center;">
+            <div class="preview-card" id="previewCard" style="background-image: url('@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")');">
                 <div class="preview-header">預覽</div>
                 <div class="preview-pet-avatar" style="border-color: white;">
                     <!-- SVG Pet Avatar Container -->
@@ -501,10 +522,28 @@
 
             // Update preview card with background image
             const previewCard = document.getElementById('previewCard');
+
+            // 使用 CSS 屬性確保背景圖片正確顯示
             previewCard.style.backgroundImage = `url('${image}')`;
             previewCard.style.backgroundSize = 'cover';
             previewCard.style.backgroundPosition = 'center';
-            previewCard.style.backgroundColor = ''; // Clear background color
+            previewCard.style.backgroundRepeat = 'no-repeat';
+            previewCard.style.backgroundColor = 'transparent';
+
+            // Debug: 確認背景圖片路徑
+            console.log('[Background Preview] Selected:', code, 'Image path:', image);
+
+            // 預載圖片確保能正確顯示
+            const img = new Image();
+            img.onload = function() {
+                console.log('[Background Preview] Image loaded successfully:', image);
+            };
+            img.onerror = function() {
+                console.error('[Background Preview] Failed to load image:', image);
+                // 如果圖片載入失敗，顯示漸層背景作為後備
+                previewCard.style.backgroundImage = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            };
+            img.src = image;
 
             document.getElementById('confirmBackgroundColor').disabled = false;
         }
@@ -531,7 +570,10 @@
             previewCard.style.backgroundImage = `url('${selectedBackgroundImage}')`;
             previewCard.style.backgroundSize = 'cover';
             previewCard.style.backgroundPosition = 'center';
-            previewCard.style.backgroundColor = '';
+            previewCard.style.backgroundRepeat = 'no-repeat';
+            previewCard.style.backgroundColor = 'transparent';
+
+            console.log('[Background Reset] Restored to:', selectedBackgroundColor, 'Image:', selectedBackgroundImage);
 
             document.getElementById('confirmBackgroundColor').disabled = true;
         }

@@ -865,7 +865,8 @@ namespace GamiPort.Areas.MiniGame.Services
 			}
 
 			// Fallback: use full timestamp + GUID if all retries failed
-			var fallbackCode = $"CPN-{DateTime.Now:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..30];
+			var appNow = _appClock.ToAppTime(_appClock.UtcNow);
+			var fallbackCode = $"CPN-{appNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..30];
 			_logger.LogError("優惠券代碼生成失敗，使用 Fallback: Code={Code}", fallbackCode);
 			return fallbackCode;
 		}
@@ -898,7 +899,8 @@ namespace GamiPort.Areas.MiniGame.Services
 			}
 
 			// Fallback: use full timestamp + GUID if all retries failed
-			var fallbackCode = $"EV-{DateTime.Now:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..30];
+			var appNow = _appClock.ToAppTime(_appClock.UtcNow);
+			var fallbackCode = $"EV-{appNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..30];
 			_logger.LogError("電子禮券代碼生成失敗，使用 Fallback: Code={Code}", fallbackCode);
 			return fallbackCode;
 		}

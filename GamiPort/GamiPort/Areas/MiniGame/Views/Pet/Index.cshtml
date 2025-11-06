@@ -263,7 +263,7 @@
             box-shadow: 0 8px 24px rgba(255, 159, 67, 0.4);
             cursor: pointer;
             transition: all 0.3s ease;
-            z-index: 1000;
+            z-index: 1100;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -363,7 +363,7 @@
                                     <span class="level-badge">LV. @Model.Level</span>
                                 </div>
                             </div>
-                            <div class="card-body text-center p-4" style="background-image: url('/MiniGame/backgrounds/@(Model.BackgroundColor).png'); background-size: cover; background-position: center;">
+                            <div class="card-body text-center p-4" style="background-image: url('/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/@(Model.BackgroundColor).png'); background-size: cover; background-position: center;">
                                 <!-- Pet Avatar - SVG Rendered -->
                                 <div id="petAvatarContainer" class="pet-avatar-container" style="position: relative; margin: 0 auto;">
                                     <!-- SVG Pet will be rendered here by pet-avatar.js -->
@@ -383,14 +383,14 @@
                                             <i class="bi bi-star-fill me-2"></i>經驗值
                                         </div>
                                         <div class="progress">
-                                            <div class="progress-bar"
+                                            <div class="progress-bar" id="experience-bar"
                                                  style="width: @((Model.ExperienceToNextLevel > 0 ? (Model.Experience * 100.0 / Model.ExperienceToNextLevel.Value) : 0).ToString("F2"))%; background: linear-gradient(90deg, #17a2b8 0%, #0d9488 100%);"
                                                  role="progressbar">
                                                 @((Model.ExperienceToNextLevel > 0 ? (Model.Experience * 100.0 / Model.ExperienceToNextLevel.Value) : 0).ToString("F0"))%
                                             </div>
                                         </div>
                                         <div class="text-center mt-1">
-                                            <small class="stat-description">
+                                            <small class="stat-description" id="experience-text">
                                                 @Model.Experience / @(Model.ExperienceToNextLevel ?? 0)
                                             </small>
                                         </div>
@@ -583,11 +583,11 @@
                                 <div class="stat-card">
                                     <div class="d-flex justify-content-between mb-2">
                                         <span class="stat-label">當前經驗</span>
-                                        <span class="fw-bold text-teal">@Model.Experience</span>
+                                        <span class="fw-bold text-teal" id="current-exp-display">@Model.Experience</span>
                                     </div>
                                     <div class="d-flex justify-content-between mb-2">
                                         <span class="stat-label">升級需求</span>
-                                        <span class="fw-bold text-teal">@(Model.ExperienceToNextLevel ?? 0)</span>
+                                        <span class="fw-bold text-teal" id="required-exp-display">@(Model.ExperienceToNextLevel ?? 0)</span>
                                     </div>
                                     <div class="d-flex justify-content-between">
                                         <span class="stat-label">最後升級時間</span>
@@ -833,6 +833,15 @@
             updateStatusDescription('cleanliness', pet.cleanliness);
             updateStatusDescription('health', pet.health);
 
+            // 更新經驗值和等級（如果後端有返回）
+            if (typeof pet.experience === 'number' && typeof pet.experienceToNextLevel === 'number') {
+                updateExperienceBar(pet.experience, pet.experienceToNextLevel);
+            }
+
+            if (typeof pet.level === 'number') {
+                updateLevel(pet.level);
+            }
+
             // 更新健康狀態文字
             if (pet.healthStatus) {
                 const healthStatusElement = document.querySelector('.pet-health-status');
@@ -872,31 +881,24 @@
 
         // 更新進度條
         function updateProgressBar(statName, value) {
-            const progressBar = document.querySelector(`.progress-bar:has(~ div:contains("${statName}"))`);
-            if (!progressBar) return;
+            // 將統一的首字母大寫格式轉換為小寫ID格式
+            const statId = statName.toLowerCase() + '-bar';
+            const bar = document.getElementById(statId);
 
-            // 尋找對應的進度條 - 使用更精確的選擇器
-            const statCards = document.querySelectorAll('.stat-card');
-            statCards.forEach(card => {
-                const label = card.querySelector('.stat-label');
-                if (label && label.textContent.includes(getStatLabelText(statName))) {
-                    const bar = card.querySelector('.progress-bar');
-                    if (bar) {
-                        bar.style.width = value + '%';
-                        bar.textContent = value + '%';
+            if (bar) {
+                bar.style.width = value + '%';
+                bar.textContent = value + '%';
 
-                        // 更新顏色
-                        bar.className = 'progress-bar';
-                        if (value < 20) {
-                            bar.classList.add('bg-danger');
-                        } else if (value < 50) {
-                            bar.classList.add('bg-warning');
-                        } else {
-                            bar.classList.add('bg-success');
-                        }
-                    }
+                // 更新顏色
+                bar.className = 'progress-bar';
+                if (value < 20) {
+                    bar.classList.add('bg-danger');
+                } else if (value < 50) {
+                    bar.classList.add('bg-warning');
+                } else {
+                    bar.classList.add('bg-success');
                 }
-            });
+            }
         }
 
         // 獲取狀態中文標籤
@@ -909,6 +911,53 @@
                 'Health': '健康值'
             };
             return labels[statName] || statName;
+        }
+
+        // 更新經驗值條
+        function updateExperienceBar(currentExp, requiredExp) {
+            const experienceBar = document.getElementById('experience-bar');
+            const experienceText = document.getElementById('experience-text');
+            const currentExpDisplay = document.getElementById('current-exp-display');
+            const requiredExpDisplay = document.getElementById('required-exp-display');
+
+            if (experienceBar && requiredExp > 0) {
+                const percentage = (currentExp * 100.0 / requiredExp);
+                experienceBar.style.width = percentage.toFixed(2) + '%';
+                experienceBar.textContent = Math.round(percentage) + '%';
+            }
+
+            if (experienceText) {
+                experienceText.textContent = `${currentExp} / ${requiredExp}`;
+            }
+
+            // 更新右側等級資訊卡的經驗值顯示
+            if (currentExpDisplay) {
+                currentExpDisplay.textContent = currentExp;
+            }
+
+            if (requiredExpDisplay) {
+                requiredExpDisplay.textContent = requiredExp;
+            }
+        }
+
+        // 更新等級顯示
+        function updateLevel(level) {
+            // 更新主卡片上的等級徽章
+            const levelBadge = document.querySelector('.pet-card-header .level-badge');
+            if (levelBadge) {
+                levelBadge.textContent = 'LV. ' + level;
+            }
+
+            // 更新右側等級資訊卡的等級徽章
+            const levelInfoBadge = document.querySelector('.card-body .level-badge');
+            if (levelInfoBadge && levelInfoBadge.textContent.includes('等級')) {
+                levelInfoBadge.textContent = '等級 ' + level;
+            }
+
+            // 如果寵物SVG存在，更新寵物的等級
+            if (petAvatar) {
+                petAvatar.updateStats({ level: level });
+            }
         }
 
         function showResult(success, message, statChanges) {

@@ -1,9 +1,11 @@
 @using GamiPort.Areas.MiniGame.Controllers
 @using GamiPort.Areas.MiniGame.Helpers
 @model SignInHistoryViewModel
+@inject GamiPort.Infrastructure.Time.IAppClock AppClock
 
 @{
 	ViewData["Title"] = "簽到歷史";
+	var appNow = AppClock.ToAppTime(AppClock.UtcNow);
 }
 
 <div class="container my-5">
@@ -21,7 +23,7 @@
 							<label class="mr-2">年份:</label>
 							<select name="year" class="form-control form-control-sm mr-2">
 								<option value="">不指定</option>
-								@for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 5; y--)
+								@for (int y = appNow.Year; y >= appNow.Year - 5; y--)
 								{
 									<option value="@y" selected="@(Model.FilterYear == y)">@y</option>
 								}

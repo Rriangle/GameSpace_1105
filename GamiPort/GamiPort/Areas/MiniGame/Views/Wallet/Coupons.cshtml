@@ -1,9 +1,11 @@
 @using GamiPort.Areas.MiniGame.Helpers
 @using GamiPort.Models
+@inject GamiPort.Infrastructure.Time.IAppClock AppClock
 @{
     ViewData["Title"] = "商城優惠券";
     var coupons = ViewBag.Coupons as List<Coupon> ?? new List<Coupon>();
     var searchTerm = ViewBag.SearchTerm as string ?? "";
+    var appNow = AppClock.ToAppTime(AppClock.UtcNow);
 }
 
 @if (User.Identity?.IsAuthenticated == true)
@@ -487,9 +489,9 @@
                     @foreach (var coupon in coupons)
                     {
                         var validTo = coupon.CouponType?.ValidTo;
-                        var isExpired = validTo != null && validTo < DateTime.Now;
+                        var isExpired = validTo != null && validTo < appNow;
                         var isUsed = coupon.IsUsed;
-                        var daysUntilExpiry = validTo != null ? (int)(validTo.Value - DateTime.Now).TotalDays : -1;
+                        var daysUntilExpiry = validTo != null ? (int)(validTo.Value - appNow).TotalDays : -1;
                         var isExpiringSoon = daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
 
                         <div class="coupon-card" data-coupon-id="@coupon.CouponId" data-status="@(isUsed ? "used" : isExpired ? "expired" : "unused")">

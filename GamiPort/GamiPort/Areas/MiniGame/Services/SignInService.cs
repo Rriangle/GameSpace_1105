@@ -224,10 +224,11 @@ namespace GamiPort.Areas.MiniGame.Services
 		public async Task<SignInCalendarDto> GetMonthlyCalendarAsync(int userId, int year, int month)
 		{
 			// 驗證月份
+			var appNow = _appClock.ToAppTime(_appClock.UtcNow);
 			if (month < 1 || month > 12)
-				month = DateTime.Now.Month;
+				month = appNow.Month;
 			if (year < 1900)
-				year = DateTime.Now.Year;
+				year = appNow.Year;
 
 			var monthStart = new DateTime(year, month, 1);
 			var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
@@ -358,33 +359,46 @@ namespace GamiPort.Areas.MiniGame.Services
 				.OrderByDescending(x => x)
 				.ToList();
 
-			int maxConsecutive = 0;
+			// === 計算當前連續簽到天數 ===
 			int currentConsecutive = 0;
-
-			// 檢查是否今天已簽到
-			bool isSignedInToday = signInDates.FirstOrDefault() == today;
-
-			// 計算最長連續與當前連續
-			int consecutiveCount = 0;
-			DateTime? expectedDate = isSignedInToday ? today : today.AddDays(1);
+			DateTime expectedDate = today;
 
 			foreach (var date in signInDates)
 			{
-				if (expectedDate == null || date == expectedDate)
+				if (date == expectedDate)
 				{
-					consecutiveCount++;
-					expectedDate = date.AddDays(-1);
+					currentConsecutive++;
+					expectedDate = expectedDate.AddDays(-1);
 				}
-				else
+				else if (date < expectedDate)
 				{
-					maxConsecutive = Math.Max(maxConsecutive, consecutiveCount);
-					consecutiveCount = 1;
-					expectedDate = date.AddDays(-1);
+					// 發現 gap，停止計算當前連續
+					break;
 				}
 			}
 
-			maxConsecutive = Math.Max(maxConsecutive, consecutiveCount);
-			currentConsecutive = isSignedInToday ? consecutiveCount : 0;
+			// === 計算歷史最長連續簽到天數 ===
+			int maxConsecutive = 0;
+			int tempConsecutive = 1;
+
+			for (int i = 1; i < signInDates.Count; i++)
+			{
+				var prevDate = signInDates[i - 1];
+				var currDate = signInDates[i];
+
+				if (prevDate.AddDays(-1) == currDate)
+				{
+					tempConsecutive++;
+				}
+				else
+				{
+					maxConsecutive = Math.Max(maxConsecutive, tempConsecutive);
+					tempConsecutive = 1;
+				}
+			}
+
+			maxConsecutive = Math.Max(maxConsecutive, tempConsecutive);
+			maxConsecutive = Math.Max(maxConsecutive, currentConsecutive);
 
 			return (currentConsecutive, maxConsecutive);
 		}
