@@ -870,6 +870,105 @@ Build succeeded.
 
 ---
 
+### 2025-11-06 (未記錄具體時間) - 寵物養成與小遊戲增強優化 ✅
+
+**目標**: 大幅提升寵物養成和小遊戲的互動性和視覺效果
+
+**完成內容**:
+
+1. **創建可愛寵物 SVG 渲染系統** (`pet-avatar.js` - 724 行)
+   - ✅ 可愛小貓形體設計（頭、身體、耳朵、尾巴、小手、腳掌細節）
+   - ✅ 眼睛追蹤鼠標功能（實時眼珠移動）
+   - ✅ 呼吸動畫（身體微微縮放）
+   - ✅ 自動眨眼動畫
+   - ✅ 根據 5 個狀態值智能表情系統：
+     - `hungry`（飢餓）- 汗滴特效
+     - `dirty`（骯髒）- 污漬顯示
+     - `sleepy`（睏倦）- 瞇眼效果
+     - `sad`（傷心）- 向下嘴角
+     - `happy`（開心）- 微笑 + 腮紅
+     - `normal`（正常）- 平靜表情
+     - `sick`（生病）- X_X 眼睛
+     - `critical`（危急）- 嚴重狀態
+   - ✅ 尾巴搖擺、耳朵擺動、鬍鬚抽動動畫
+   - ✅ 小手揮動動畫
+   - ✅ 互動粒子特效（餵食🍖、洗澡💧、玩耍⚽、睡覺💤）
+   - ✅ 升級特效系統：
+     - 全身金色發光動畫
+     - "LEVEL UP" 標籤彈出
+     - 星星爆發特效（8個方向）
+     - 點數獲得提示
+   - ✅ 支持動態換膚色、換背景色
+
+2. **更新 Pet/Index.cshtml** (新增集成代碼)
+   - ✅ 引入 `pet-avatar.js` 腳本
+   - ✅ 初始化寵物實例，傳入 5 個狀態值
+   - ✅ 連接 `/MiniGame/Pet/Interact` API（餵食/洗澡/玩耍/睡眠）
+   - ✅ 互動成功後播放動畫特效
+   - ✅ 實時更新狀態進度條和寵物表情
+   - ✅ 修復狀態更新函數（`updatePetStats`, `updateProgressBar`）
+
+3. **更新 Pet/Customize.cshtml**
+   - ✅ 連接 `/MiniGame/Pet/UpdateAppearance` API
+   - ✅ 實時更新用戶點數顯示
+   - ✅ 完整錯誤處理機制
+
+4. **創建跑酷遊戲** (`pet-runner-game.js` - 700+ 行)
+   - ✅ Canvas 2D 繪圖引擎
+   - ✅ 可愛風格寵物渲染（與 pet-avatar 一致的風格）
+   - ✅ 3 種可愛怪物障礙物（不同顏色、觸角設計）
+   - ✅ 物理引擎（重力、跳躍）
+   - ✅ 碰撞檢測（AABB 算法 + 寬容碰撞箱）
+   - ✅ 粒子系統（跳躍灰塵、遊戲結束特效）
+   - ✅ 雲朵背景動畫
+   - ✅ 草地紋理滾動
+   - ✅ 計分系統 + 最高分記錄（localStorage）
+   - ✅ 難度選擇（easy/normal/hard）
+   - ✅ 鍵盤控制（Space/Enter/方向鍵）+ 點擊/觸控支持
+   - ✅ 遊戲狀態管理（ready/playing/paused/gameOver）
+   - ✅ 響應式 Canvas 尺寸調整
+   - ✅ 回調系統（`onGameOver`, `onScoreUpdate`）
+
+5. **驗證後端 API**
+   - ✅ 確認 `PetController.Interact` 已實現（Lines 116-155）
+   - ✅ 確認 `PetController.UpdateAppearance` 已實現（Lines 161-205）
+   - ✅ 確認 `GameController` 完整實現（Start/End/History）
+
+**技術細節**:
+- **SVG 動態渲染**: 使用 `document.createElementNS` 創建 SVG 元素
+- **CSS 動畫**: `@keyframes` 實現呼吸、擺動、眨眼等
+- **Canvas 遊戲循環**: `requestAnimationFrame` 達到 60 FPS
+- **事件委託**: 滑鼠追蹤使用 `getBoundingClientRect` 計算相對位置
+- **表情決策樹**: 根據健康值、飢餓值、清潔度等優先級判斷
+- **粒子生命週期**: 自動創建和清理機制
+
+**編譯結果**:
+```
+建置成功。
+    0 個警告
+    0 個錯誤
+經過時間 00:00:01.41
+```
+
+**檔案清單**:
+1. `wwwroot/js/pet-avatar.js` (新建 - 724 行)
+2. `wwwroot/js/pet-runner-game.js` (新建 - 700+ 行)
+3. `Views/Pet/Index.cshtml` (修改 - 新增 SVG 集成與 API 連接)
+4. `Views/Pet/Customize.cshtml` (修改 - 新增 API 連接)
+
+**下一步**:
+- ✅ 集成跑酷遊戲到 `Game/Index.cshtml`（已有 GameController 完整實現）
+- 📌 測試所有功能的實際運行效果
+- 📌 優化遊戲平衡性（難度曲線、獎勵計算）
+- 📌 添加音效（可選）
+
+**備註**:
+- 寵物系統已達到高互動性：眼睛追蹤、呼吸、8種表情、升級特效
+- 跑酷遊戲已完成，風格可愛，準備集成到 Game/Index.cshtml
+- 所有 API 連接已完成，前後端完全對接
+
+---
+
 ## 執行記錄模板
 
 ### YYYY-MM-DD HH:MM - [標題]

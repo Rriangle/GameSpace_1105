@@ -498,10 +498,33 @@
         });
 
         async function confirmCustomization(type, cost) {
-            // TODO: Call API endpoint to save customization
-            // POST /api/pet/customize
-            // { type: 'skinColor'|'backgroundColor', value: color, cost: cost }
-            return true;
+            try {
+                // 調用實際 API
+                const response = await fetch('/MiniGame/Pet/UpdateAppearance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `skinColor=${encodeURIComponent(selectedSkinColor)}&background=${encodeURIComponent(selectedBackgroundColor)}`
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 更新用戶點數顯示
+                    if (result.wallet) {
+                        document.getElementById('userPointsDisplay').textContent = result.wallet.userPoint;
+                    }
+
+                    showSuccessMessage(result.message);
+                    return true;
+                } else {
+                    alert(result.message);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Customization error:', error);
+                alert('定制失敗，請重試');
+                return false;
+            }
         }
 
         function showSuccessMessage(message) {

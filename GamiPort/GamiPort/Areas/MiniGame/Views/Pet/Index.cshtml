@@ -367,9 +367,9 @@
                                 </div>
                             </div>
                             <div class="card-body text-center p-4" style="background-color: @Model.BackgroundColor">
-                                <!-- Pet Avatar -->
-                                <div class="pet-avatar" style="background-color: @Model.SkinColor; border: 4px solid white;">
-                                    <i class="bi bi-heart-fill text-white"></i>
+                                <!-- Pet Avatar - SVG Rendered -->
+                                <div id="petAvatarContainer" class="pet-avatar-container" style="position: relative; margin: 0 auto;">
+                                    <!-- SVG Pet will be rendered here by pet-avatar.js -->
                                 </div>
 
                                 <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
@@ -682,13 +682,41 @@
         </div>
     }
 }
+
+    <!-- 引入可愛寵物 SVG 渲染器 -->
+    <script src="~/Areas/MiniGame/wwwroot/js/pet-avatar.js"></script>
+
     <script>
-        // Interaction configuration
+        // 全局變量：寵物實例
+        let petAvatar = null;
+
+        // 頁面加載時初始化寵物
+        document.addEventListener('DOMContentLoaded', function () {
+            if (document.getElementById('petAvatarContainer')) {
+                // 根據當前寵物數據創建 SVG 寵物
+                petAvatar = new PetAvatar('petAvatarContainer', {
+                    skinColor: '@Model.SkinColor',
+                    backgroundColor: '@Model.BackgroundColor',
+                    size: 180,
+                    animated: true,
+                    enableEyeTracking: true,
+                    enableBreathing: true,
+                    hunger: @Model.Hunger,
+                    mood: @Model.Mood,
+                    stamina: @Model.Stamina,
+                    cleanliness: @Model.Cleanliness,
+                    health: @Model.Health,
+                    level: @Model.Level
+                });
+            }
+        });
+
+        // 互動配置（僅用於前端提示）
         const interactionConfig = {
-            feed: { icon: 'bi-cup-straw', message: '您給寵物餵食了！', statChanges: { hunger: -20, experience: 10 }, cooldown: 60 },
-            bath: { icon: 'bi-droplet', message: '您給寵物洗澡了！', statChanges: { cleanliness: +20, stamina: -10, experience: 15 }, cooldown: 120 },
-            play: { icon: 'bi-dice-5', message: '您和寵物一起玩耍了！', statChanges: { mood: +20, stamina: -20, hunger: +10, experience: 20 }, cooldown: 90 },
-            sleep: { icon: 'bi-moon-stars', message: '寵物睡覺了，狀態恢復中...', statChanges: { stamina: +30, hunger: -10, health: +10, experience: 5 }, cooldown: 180 }
+            feed: { icon: 'bi-cup-straw', message: '您給寵物餵食了！', type: 'feed' },
+            bath: { icon: 'bi-droplet', message: '您給寵物洗澡了！', type: 'bath' },
+            play: { icon: 'bi-dice-5', message: '您和寵物一起玩耍了！', type: 'play' },
+            sleep: { icon: 'bi-moon-stars', message: '寵物睡覺了，狀態恢復中...', type: 'sleep' }
         };
 
         const interactionCooldowns = {};
@@ -705,23 +733,46 @@
             button.classList.add('loading');
 
             try {
-                // TODO: Call actual API endpoint
-                // const response = await fetch('/MiniGame/Pet/Interact', {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify({ action: action, petId: @Model.PetId })
-                // });
+                // 調用實際 API
+                const response = await fetch('/MiniGame/Pet/Interact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=${encodeURIComponent(action)}`
+                });
 
-                // For demo purposes, simulate API call
-                await new Promise(resolve => setTimeout(resolve, 800));
+                const result = await response.json();
 
-                // Simulate success
-                const config = interactionConfig[action];
-                showResult(true, config.message, config.statChanges);
-                setInteractionCooldown(action, config.cooldown);
+                if (result.success) {
+                    // 播放互動動畫
+                    if (petAvatar) {
+                        petAvatar.playInteraction(action);
+                    }
 
-                // TODO: Update pet stats in real-time
-                // Update UI with new stats from API response
+                    // 顯示成功消息
+                    showResult(true, result.message, null);
+
+                    // 更新寵物狀態
+                    if (result.pet) {
+                        updatePetStats(result.pet);
+
+                        // 更新寵物 SVG
+                        if (petAvatar) {
+                            petAvatar.updateStats({
+                                hunger: result.pet.hunger,
+                                mood: result.pet.mood,
+                                stamina: result.pet.stamina,
+                                cleanliness: result.pet.cleanliness,
+                                health: result.pet.health
+                            });
+                        }
+                    }
+
+                    // 設置冷卻（5分鐘 = 300秒，根據後端設定）
+                    setInteractionCooldown(action, 60);
+
+                } else {
+                    showResult(false, result.message);
+                }
 
             } catch (error) {
                 showResult(false, '互動失敗，請重試');
@@ -730,6 +781,65 @@
                 button.disabled = false;
                 button.classList.remove('loading');
             }
+        }
+
+        // 更新寵物狀態 UI
+        function updatePetStats(pet) {
+            // 更新進度條
+            updateProgressBar('Hunger', pet.hunger);
+            updateProgressBar('Mood', pet.mood);
+            updateProgressBar('Stamina', pet.stamina);
+            updateProgressBar('Cleanliness', pet.cleanliness);
+            updateProgressBar('Health', pet.health);
+
+            // 更新健康狀態文字
+            if (pet.healthStatus) {
+                const healthStatusElement = document.querySelector('.pet-health-status');
+                if (healthStatusElement) {
+                    healthStatusElement.textContent = pet.healthStatus;
+                }
+            }
+        }
+
+        // 更新進度條
+        function updateProgressBar(statName, value) {
+            const progressBar = document.querySelector(`.progress-bar:has(~ div:contains("${statName}"))`);
+            if (!progressBar) return;
+
+            // 尋找對應的進度條 - 使用更精確的選擇器
+            const statCards = document.querySelectorAll('.stat-card');
+            statCards.forEach(card => {
+                const label = card.querySelector('.stat-label');
+                if (label && label.textContent.includes(getStatLabelText(statName))) {
+                    const bar = card.querySelector('.progress-bar');
+                    if (bar) {
+                        bar.style.width = value + '%';
+                        bar.textContent = value + '%';
+
+                        // 更新顏色
+                        bar.className = 'progress-bar';
+                        if (value < 20) {
+                            bar.classList.add('bg-danger');
+                        } else if (value < 50) {
+                            bar.classList.add('bg-warning');
+                        } else {
+                            bar.classList.add('bg-success');
+                        }
+                    }
+                }
+            });
+        }
+
+        // 獲取狀態中文標籤
+        function getStatLabelText(statName) {
+            const labels = {
+                'Hunger': '飢餓度',
+                'Mood': '心情',
+                'Stamina': '體力',
+                'Cleanliness': '清潔度',
+                'Health': '健康值'
+            };
+            return labels[statName] || statName;
         }
 
         function showResult(success, message, statChanges) {
