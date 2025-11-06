@@ -1310,12 +1310,27 @@
             updateStatusDescription('health', pet.health);
 
             // 更新經驗值和等級(如果後端有返回)
-            if (typeof pet.experience === 'number' && typeof pet.experienceToNextLevel === 'number') {
-                updateExperienceBar(pet.experience, pet.experienceToNextLevel);
-            }
+            if (typeof pet.experience === 'number' && typeof pet.level === 'number') {
+                // 模擬升級計算顯示值（與Controller.Index邏輯一致）
+                let displayLevel = pet.level;
+                let displayExperience = pet.experience;
 
-            if (typeof pet.level === 'number') {
-                updateLevel(pet.level);
+                while (true) {
+                    const requiredExp = getRequiredExpForLevel(displayLevel + 1);
+                    if (requiredExp > 0 && displayExperience >= requiredExp) {
+                        displayLevel++;
+                        displayExperience -= requiredExp;
+                    } else {
+                        break;
+                    }
+                }
+
+                // 計算顯示用的下一級經驗需求
+                const expToNext = getRequiredExpForLevel(displayLevel + 1);
+
+                // 使用計算後的顯示值更新UI
+                updateExperienceBar(displayExperience, expToNext);
+                updateLevel(displayLevel);
             }
 
             // 更新健康狀態文字
@@ -1391,6 +1406,35 @@
                 'Health': '健康值'
             };
             return labels[statName] || statName;
+        }
+
+        // 獲取指定等級所需的經驗值（與後端邏輯一致）
+        function getRequiredExpForLevel(level) {
+            if (level < 1) {
+                return 0;
+            }
+
+            if (level > 250) {
+                // 超過250級視為最高等級
+                return 0;
+            }
+
+            // 三級經驗值公式
+            if (level <= 10) {
+                // Level 1-10: 線性公式
+                // EXP = 40 * level + 60
+                return 40 * level + 60;
+            }
+            else if (level <= 100) {
+                // Level 11-100: 二次公式
+                // EXP = 0.8 * level^2 + 380
+                return Math.floor(0.8 * level * level + 380);
+            }
+            else {
+                // Level 101+: 指數公式
+                // EXP = 285.69 * (1.06 ^ level)
+                return Math.floor(285.69 * Math.pow(1.06, level));
+            }
         }
 
         // 更新經驗值條
