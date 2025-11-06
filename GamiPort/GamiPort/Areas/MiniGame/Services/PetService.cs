@@ -133,7 +133,7 @@ namespace GamiPort.Areas.MiniGame.Services
 					{
 						// 讀取獎勵配置（預設 100 經驗值、0 點數）
 						int bonusExp = 100; // 商業規則：每日狀態全滿獎勵 +100 經驗值
-						int bonusPoints = 0;
+						int bonusPoints = 100; // 商業規則：每日狀態全滿獎勵 +100 點會員點數
 
 						// 發放寵物經驗值
 						pet.Experience += bonusExp;
@@ -180,13 +180,13 @@ namespace GamiPort.Areas.MiniGame.Services
 							ChangeType = "Point",
 							PointsChanged = bonusPoints,
 							ItemCode = todayItemCode,
-							Description = $"寵物狀態全滿獎勵（經驗值+{bonusExp}）",
+							Description = $"寵物狀態全滿獎勵（經驗值+{bonusExp}，點數+{bonusPoints}）",
 							ChangeTime = _appClock.UtcNow,
 							IsDeleted = false
 						};
 						_context.WalletHistories.Add(historyRecord);
 
-						bonusMessage = $" | 🎉 首次達成今日狀態全滿！獲得額外 {bonusExp} 經驗值！";
+						bonusMessage = $" | 🎉 首次達成今日狀態全滿！獲得額外 {bonusExp} 經驗值和 {bonusPoints} 點數！";
 					}
 				}
 

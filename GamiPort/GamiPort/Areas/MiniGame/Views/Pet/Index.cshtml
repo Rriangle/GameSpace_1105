@@ -752,12 +752,6 @@
         const interactionCooldowns = {};
 
         async function interactWithPet(action, button) {
-            // Check cooldown
-            if (interactionCooldowns[action]) {
-                showResult(false, `${action}互動冷卻中，請稍候 ${interactionCooldowns[action]} 秒`);
-                return;
-            }
-
             // Disable button and show loading
             button.disabled = true;
             button.classList.add('loading');
@@ -802,9 +796,6 @@
                             });
                         }
                     }
-
-                    // 設置冷卻（5分鐘 = 300秒，根據後端設定）
-                    setInteractionCooldown(action, 60);
 
                 } else {
                     showResult(false, result.message);
