@@ -71,6 +71,7 @@ namespace GamiPort.Areas.MiniGame.Services
 			try
 			{
 				var coupons = await _context.Coupons
+					.Include(c => c.CouponType)
 					.AsNoTracking()
 					.Where(c => c.UserId == userId && !c.IsDeleted)
 					.ToListAsync();
@@ -117,6 +118,7 @@ namespace GamiPort.Areas.MiniGame.Services
 			try
 			{
 				var evouchers = await _context.Evouchers
+					.Include(e => e.EvoucherType)
 					.AsNoTracking()
 					.Where(e => e.UserId == userId && !e.IsDeleted)
 					.ToListAsync();

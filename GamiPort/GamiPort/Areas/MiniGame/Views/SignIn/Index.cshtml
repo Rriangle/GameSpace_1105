@@ -187,58 +187,71 @@
 						<a href="@Url.Action("History")" class="btn btn-primary" style="background-color: #17a2b8; border-color: #17a2b8;">
 							<i class="fas fa-history"></i> 查看簽到歷史
 						</a>
+						<button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#signInRulesModal">
+							<i class="fas fa-gift"></i> 查看簽到規則
+						</button>
 					</div>
 				</div>
 			</div>
 
-			<!-- 簽到規則預覽 -->
-			<div class="card mt-4" style="border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-				<div class="card-header" style="background: linear-gradient(135deg, #ffa500 0%, #ff9f43 100%); color: white; border-radius: 16px 16px 0 0;">
-					<h5 class="mb-0"><i class="fas fa-gift me-2"></i>簽到規則預覽</h5>
-				</div>
-				<div class="card-body">
-					<div class="row">
-						<div class="col-md-6 mb-3">
-							<div class="p-3 border rounded" style="background-color: #f8f9fa;">
-								<h6 class="fw-bold text-primary"><i class="fas fa-calendar-day"></i> 平日獎勵</h6>
-								<ul class="mb-0">
-									<li>會員點數：+20 點</li>
-									<li>寵物經驗：+0 經驗</li>
-								</ul>
+			<!-- 簽到規則 Modal -->
+			<div class="modal fade" id="signInRulesModal" tabindex="-1" aria-labelledby="signInRulesModalLabel" aria-hidden="true">
+				<div class="modal-dialog modal-lg modal-dialog-centered">
+					<div class="modal-content">
+						<div class="modal-header" style="background: linear-gradient(135deg, #ffa500 0%, #ff9f43 100%); color: white;">
+							<h5 class="modal-title" id="signInRulesModalLabel">
+								<i class="fas fa-gift me-2"></i>簽到規則說明
+							</h5>
+							<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+						</div>
+						<div class="modal-body">
+							<div class="row">
+								<div class="col-md-6 mb-3">
+									<div class="p-3 border rounded" style="background-color: #f8f9fa;">
+										<h6 class="fw-bold text-primary"><i class="fas fa-calendar-day"></i> 平日獎勵</h6>
+										<ul class="mb-0">
+											<li>會員點數：+20 點</li>
+											<li>寵物經驗：+0 經驗</li>
+										</ul>
+									</div>
+								</div>
+								<div class="col-md-6 mb-3">
+									<div class="p-3 border rounded" style="background-color: #fff8e1;">
+										<h6 class="fw-bold text-warning"><i class="fas fa-calendar-week"></i> 假日獎勵</h6>
+										<ul class="mb-0">
+											<li>會員點數：+30 點</li>
+											<li>寵物經驗：+200 經驗</li>
+										</ul>
+									</div>
+								</div>
+								<div class="col-md-6 mb-3">
+									<div class="p-3 border rounded" style="background-color: #e8f5e9;">
+										<h6 class="fw-bold text-success"><i class="fas fa-fire"></i> 連續7天獎勵</h6>
+										<ul class="mb-0">
+											<li>額外會員點數：+40 點</li>
+											<li>額外寵物經驗：+300 經驗</li>
+										</ul>
+									</div>
+								</div>
+								<div class="col-md-6 mb-3">
+									<div class="p-3 border rounded" style="background-color: #fce4ec;">
+										<h6 class="fw-bold text-danger"><i class="fas fa-trophy"></i> 當月全勤獎勵</h6>
+										<ul class="mb-0">
+											<li>額外會員點數：+200 點</li>
+											<li>額外寵物經驗：+2000 經驗</li>
+											<li>商城優惠券：+1 張</li>
+										</ul>
+									</div>
+								</div>
+							</div>
+							<div class="alert alert-info mt-3 mb-0">
+								<i class="fas fa-info-circle"></i> <strong>提示：</strong>
+								每日簽到時間以 UTC+8 時區為準，每日限簽到一次。連續簽到可獲得更多獎勵！
 							</div>
 						</div>
-						<div class="col-md-6 mb-3">
-							<div class="p-3 border rounded" style="background-color: #fff8e1;">
-								<h6 class="fw-bold text-warning"><i class="fas fa-calendar-week"></i> 假日獎勵</h6>
-								<ul class="mb-0">
-									<li>會員點數：+30 點</li>
-									<li>寵物經驗：+200 經驗</li>
-								</ul>
-							</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
 						</div>
-						<div class="col-md-6 mb-3">
-							<div class="p-3 border rounded" style="background-color: #e8f5e9;">
-								<h6 class="fw-bold text-success"><i class="fas fa-fire"></i> 連續7天獎勵</h6>
-								<ul class="mb-0">
-									<li>額外會員點數：+40 點</li>
-									<li>額外寵物經驗：+300 經驗</li>
-								</ul>
-							</div>
-						</div>
-						<div class="col-md-6 mb-3">
-							<div class="p-3 border rounded" style="background-color: #fce4ec;">
-								<h6 class="fw-bold text-danger"><i class="fas fa-trophy"></i> 當月全勤獎勵</h6>
-								<ul class="mb-0">
-									<li>額外會員點數：+200 點</li>
-									<li>額外寵物經驗：+2000 經驗</li>
-									<li>商城優惠券：+1 張</li>
-								</ul>
-							</div>
-						</div>
-					</div>
-					<div class="alert alert-info mt-3 mb-0">
-						<i class="fas fa-info-circle"></i> <strong>提示：</strong>
-						每日簽到時間以 UTC+8 時區為準，每日限簽到一次。連續簽到可獲得更多獎勵！
 					</div>
 				</div>
 			</div>
