@@ -592,10 +592,11 @@
 
                     <!-- 遊戲容器 -->
                     <div class="game-container-section">
-                        <div id="unity-container">
-                            <div style="text-align: center;">
+                        <div id="game-canvas-container" style="position: relative; width: 100%; aspect-ratio: 16 / 9; min-height: 360px; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, #87CEEB 0%, #E0F6FF 100%);">
+                            <canvas id="gameCanvas" style="display: block; width: 100%; height: 100%;"></canvas>
+                            <div id="game-start-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.95); z-index: 10;">
                                 <i class="bi bi-egg-fill" style="font-size: 3.5rem; color: var(--teal-primary); margin-bottom: 1rem; display: block; animation: bounce 1.5s ease-in-out infinite;"></i>
-                                <p style="font-size: 1.1rem; font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem;">恐龍跑酷遊戲區</p>
+                                <p style="font-size: 1.1rem; font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem;">寵物跑酷遊戲區</p>
                                 @if (selectedLevel > 0)
                                 {
                                     <p style="font-size: 0.9rem; color: #7f8c8d; margin-top: 1rem;">
@@ -605,7 +606,7 @@
                                     </p>
                                     <p style="font-size: 0.85rem; color: #95a5a6; margin-top: 0.5rem;">
                                         <i class="bi bi-info-circle me-1"></i>
-                                        點擊「開始遊戲」後，使用空白鍵控制恐龍跳躍
+                                        點擊「開始遊戲」後，使用空白鍵或點擊畫面讓寵物跳躍
                                     </p>
                                 }
                                 else
@@ -790,11 +791,139 @@ else
 }
 
 @section Scripts {
+    <script src="~/Areas/MiniGame/wwwroot/js/pet-runner-game.js"></script>
     <script>
+        let petRunnerGame = null;
+        let currentGameSessionId = null;
+        let currentDifficulty = '@selectedLevel';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize game with selected difficulty
+            if (currentDifficulty && currentDifficulty !== '0') {
+                initializeGame(currentDifficulty);
+            }
+
+            // Setup start game button click handler
+            const startGameForm = document.querySelector('form[action*="StartGame"]');
+            if (startGameForm) {
+                startGameForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    startGame();
+                });
+            }
+        });
+
+        function initializeGame(difficulty) {
+            const difficultyMap = {
+                '1': 'easy',
+                '2': 'normal',
+                '3': 'hard'
+            };
+
+            if (petRunnerGame) {
+                petRunnerGame.destroy();
+            }
+
+            petRunnerGame = new PetRunnerGame('gameCanvas', {
+                difficulty: difficultyMap[difficulty] || 'normal',
+                petColor: '@(ViewBag.PetSkinColor ?? "#ff6b6b")',
+                onGameEnd: handleGameEnd
+            });
+        }
+
+        async function startGame() {
+            try {
+                // Call backend API to start game session
+                const response = await fetch('/MiniGame/Game/StartGame', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: `level=${currentDifficulty}`
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentGameSessionId = result.sessionId;
+
+                    // Hide overlay and start game
+                    const overlay = document.getElementById('game-start-overlay');
+                    if (overlay) {
+                        overlay.style.display = 'none';
+                    }
+
+                    // Start the actual game
+                    if (petRunnerGame) {
+                        petRunnerGame.start();
+                    }
+                } else {
+                    alert(result.message || '遊戲啟動失敗，請重試');
+                }
+            } catch (error) {
+                console.error('Start game error:', error);
+                alert('遊戲啟動失敗，請重試');
+            }
+        }
+
+        async function handleGameEnd(gameData) {
+            if (!currentGameSessionId) {
+                console.error('No game session ID');
+                return;
+            }
+
+            try {
+                // Call backend API to end game and get rewards
+                const response = await fetch('/MiniGame/Game/EndGame', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: `sessionId=${currentGameSessionId}&result=${gameData.result}&score=${gameData.score}`
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Show overlay with result
+                    const overlay = document.getElementById('game-start-overlay');
+                    if (overlay) {
+                        overlay.innerHTML = `
+                            <div style="text-align: center; padding: 2rem;">
+                                <i class="bi bi-${gameData.result === 'win' ? 'check-circle-fill' : 'x-circle-fill'}"
+                                   style="font-size: 4rem; color: ${gameData.result === 'win' ? '#28a745' : '#e74c3c'}; margin-bottom: 1rem;"></i>
+                                <h3 style="color: #2c3e50; margin-bottom: 1rem;">${gameData.result === 'win' ? '恭喜通關！' : '未能通關'}</h3>
+                                <p style="font-size: 1.5rem; font-weight: 700; color: var(--teal-primary); margin-bottom: 0.5rem;">得分：${gameData.score}</p>
+                                ${result.rewardPoints > 0 ? `<p style="color: #28a745; font-size: 1.1rem; margin-bottom: 0.5rem;">💰 獲得點數: +${result.rewardPoints}</p>` : ''}
+                                ${result.rewardExperience > 0 ? `<p style="color: #ffa500; font-size: 1.1rem; margin-bottom: 1rem;">⭐ 獲得經驗: +${result.rewardExperience}</p>` : ''}
+                                <button onclick="location.reload()" class="btn" style="background: var(--teal-primary); color: white; border-radius: 12px; padding: 0.75rem 1.5rem; border: none; cursor: pointer; font-weight: 600;">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>
+                                    再玩一次
+                                </button>
+                            </div>
+                        `;
+                        overlay.style.display = 'flex';
+                    }
+                } else {
+                    alert(result.message || '遊戲結算失敗');
+                }
+            } catch (error) {
+                console.error('End game error:', error);
+                alert('遊戲結算失敗');
+            }
+        }
+
         function abortGame() {
             if (confirm('確定要放棄本局遊戲嗎？')) {
-                // TODO: 提交放棄表單或調用 API
-                console.log('遊戲已放棄');
+                if (petRunnerGame) {
+                    petRunnerGame.pause();
+                }
+
+                if (currentGameSessionId) {
+                    handleGameEnd({ result: 'abort', score: 0 });
+                }
             }
         }
 
