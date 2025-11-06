@@ -149,6 +149,16 @@
             color: #17a2b8;
         }
 
+        /* Golden Celebration Message (固定顯示5秒) */
+        .golden-celebration-message {
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .golden-celebration-message.show {
+            display: block;
+        }
+
         .interaction-result {
             background: white;
             border-radius: 16px;
@@ -932,6 +942,29 @@
                             </div>
                         </div>
 
+                        <!-- Golden Celebration Message (Fixed for 5 seconds) -->
+                        <div class="golden-celebration-message mt-3" id="goldenCelebration">
+                            <div style="background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+                                       color: #333;
+                                       font-weight: bold;
+                                       padding: 1rem 1.5rem;
+                                       border-radius: 12px;
+                                       font-size: 1.3rem;
+                                       text-align: center;
+                                       box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+                                       border: 2px solid #ffd700;">
+                                <div style="margin-bottom: 0.5rem;">
+                                    <i class="bi bi-trophy-fill" style="color: #ff6b6b; font-size: 1.8rem; margin-right: 0.5rem;"></i>
+                                    <span style="font-size: 1.5rem;">恭喜！今日首次達成寵物狀態值全滿</span>
+                                    <i class="bi bi-trophy-fill" style="color: #ff6b6b; font-size: 1.8rem; margin-left: 0.5rem;"></i>
+                                </div>
+                                <div style="margin-top: 0.75rem; font-size: 1.2rem; display: flex; justify-content: center; gap: 2rem;">
+                                    <span><i class="bi bi-star-fill" style="color: #28a745; margin-right: 0.3rem;"></i>寵物經驗值 +<span id="celebrationBonusExp">0</span></span>
+                                    <span><i class="bi bi-gem" style="color: #17a2b8; margin-right: 0.3rem;"></i>會員點數 +<span id="celebrationBonusPoints">0</span></span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Interaction Result Area -->
                         <div class="interaction-result mt-3" id="interactionResult">
                             <div class="d-flex align-items-start">
@@ -1487,11 +1520,28 @@
         }
 
         function showResult(success, message, statChanges, isFirstDailyFullStats, bonusExp, bonusPoints) {
-            // 如果正在顯示五值全滿慶祝訊息，則忽略此次顯示請求
-            if (isShowingFullStatsReward && !isFirstDailyFullStats) {
-                return;
+            // 如果是首次五值全滿，顯示金色慶祝訊息（獨立容器，固定5秒）
+            if (isFirstDailyFullStats && bonusExp > 0) {
+                const goldenCelebration = document.getElementById('goldenCelebration');
+                const celebrationBonusExp = document.getElementById('celebrationBonusExp');
+                const celebrationBonusPoints = document.getElementById('celebrationBonusPoints');
+
+                // 更新獎勵數值
+                celebrationBonusExp.textContent = bonusExp;
+                celebrationBonusPoints.textContent = bonusPoints;
+
+                // 顯示金色慶祝訊息
+                goldenCelebration.classList.add('show');
+                isShowingFullStatsReward = true;
+
+                // 5秒後自動隱藏
+                setTimeout(() => {
+                    goldenCelebration.classList.remove('show');
+                    isShowingFullStatsReward = false;
+                }, 5000);
             }
 
+            // 顯示普通互動訊息（在金色慶祝訊息下方）
             const resultDiv = document.getElementById('interactionResult');
             const resultText = document.getElementById('resultText');
             const statChange = document.getElementById('statChange');
@@ -1511,48 +1561,16 @@
             // Update message
             resultText.textContent = message;
 
-            // Update stat changes - 不再顯示詳細變化，因為已經在message中顯示
-            let changeHtml = '';
-            let displayDuration = 6000; // 預設顯示6秒
-
-            // 如果是首次五值全滿，顯示特殊提示
-            if (isFirstDailyFullStats && bonusExp > 0) {
-                changeHtml = `<div style="background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-                                         color: #333;
-                                         font-weight: bold;
-                                         margin-top: 0.75rem;
-                                         padding: 1rem 1.5rem;
-                                         border-radius: 12px;
-                                         font-size: 1.3rem;
-                                         text-align: center;
-                                         box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
-                                         border: 2px solid #ffd700;">
-                    <div style="margin-bottom: 0.5rem;">
-                        <i class="bi bi-trophy-fill" style="color: #ff6b6b; font-size: 1.8rem; margin-right: 0.5rem;"></i>
-                        <span style="font-size: 1.5rem;">恭喜！今日首次達成寵物狀態值全滿</span>
-                        <i class="bi bi-trophy-fill" style="color: #ff6b6b; font-size: 1.8rem; margin-left: 0.5rem;"></i>
-                    </div>
-                    <div style="margin-top: 0.75rem; font-size: 1.2rem; display: flex; justify-content: center; gap: 2rem;">
-                        <span><i class="bi bi-star-fill" style="color: #28a745; margin-right: 0.3rem;"></i>寵物經驗值 +${bonusExp}</span>
-                        <span><i class="bi bi-gem" style="color: #17a2b8; margin-right: 0.3rem;"></i>會員點數 +${bonusPoints}</span>
-                    </div>
-                </div>`;
-                displayDuration = 5000; // 首次五值全滿固定顯示5秒
-                isShowingFullStatsReward = true; // 設置flag
-            }
-
-            statChange.innerHTML = changeHtml;
+            // Clear stat changes (不再顯示在此處)
+            statChange.innerHTML = '';
 
             // Show result
             resultDiv.classList.add('show');
 
-            // Auto-hide after specified duration
+            // Auto-hide after 6 seconds
             setTimeout(() => {
                 resultDiv.classList.remove('show');
-                if (isFirstDailyFullStats && bonusExp > 0) {
-                    isShowingFullStatsReward = false; // 重置flag
-                }
-            }, displayDuration);
+            }, 6000);
         }
 
         // 顯示升級通知
