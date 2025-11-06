@@ -64,6 +64,22 @@ namespace GamiPort.Areas.MiniGame.Controllers
 			ViewBag.UserPoints = wallet?.UserPoint ?? 0;  // 添加用戶點數供View使用
 			ViewBag.PetHealthStatus = GetHealthStatus(pet);
 
+			// 獲取用戶信息（用戶名稱和註冊日期）
+			var user = await _context.Users
+				.Where(u => u.UserId == userId)
+				.Select(u => new {
+					u.UserName,
+					u.CreateAccount
+				})
+				.AsNoTracking()
+				.FirstOrDefaultAsync();
+
+			if (user != null)
+			{
+				ViewBag.UserName = user.UserName;
+				ViewBag.RegistrationDate = user.CreateAccount.ToUtc8String("yyyy-MM-dd");
+			}
+
 			return View(pet);
 		}
 

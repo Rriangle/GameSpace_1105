@@ -86,6 +86,42 @@
 3. 繼續遵守邊界約束：GamiPort\Areas\MiniGame
 
 ---
+
+## 🎨 Pet/Index UI重構任務（2025-11-06新增）
+
+### ✅ 已完成項目
+- ✅ Pet/Index - 完整UI重構為L-C-R三欄布局
+  - ✅ Controller添加UserName和RegistrationDate查詢
+  - ✅ HTML結構全面改寫（左：狀態列表，中：寵物顯示，右：互動菜單）
+  - ✅ CSS樣式新增443行（包含響應式設計）
+  - ✅ JavaScript函數更新（3個函數適配新結構）
+  - ✅ 添加頂部右上角工具欄（info icon + gear icon）
+  - ✅ 添加基本信息顯示（主人名稱 + 生日）
+  - ✅ 底部冒險按鈕改為居中活潑風格
+  - ✅ dotnet build: 0 errors驗證通過
+
+### 接續點
+**狀態**: 準備Git commit and push
+
+**下一步操作**:
+1. 執行 `git add .`
+2. 執行 `git commit` with message describing UI restructuring
+3. 執行 `git push origin dev`
+
+### 技術上下文
+- **修改文件**: 2個（PetController.cs + Pet/Index.cshtml）
+- **代碼變更**: ~650行（443行CSS + 200行HTML/JS重構）
+- **保持功能**: 所有現有互動、即時更新、SVG寵物功能完整保留
+- **新增功能**: Level Info Modal, 用戶信息顯示, 新工具欄
+
+### 關鍵技術決策
+1. 使用Bootstrap Grid三欄響應式布局
+2. ViewBag傳遞UserName和RegistrationDate
+3. SQL查詢使用AsNoTracking()優化性能
+4. CSS使用漸層、動畫提升視覺效果
+5. JavaScript選擇器全部更新但保持功能完整性
+
+---
 **完成時間**: 2025-11-06
 **狀態**: ✅ **ALL TASKS COMPLETED**
-**Git Commit**: 94b920b (pushed to origin/dev)
+**待執行**: Git commit and push
