@@ -330,7 +330,7 @@
             </div>
 
             <!-- Preview Card -->
-            <div class="preview-card" id="previewCard" style="background-image: url('@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")');">
+            <div class="preview-card" id="previewCard" style="background-image: url('@Html.Raw($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")');">
                 <div class="preview-header">預覽</div>
                 <div class="preview-pet-avatar" style="border-color: white;">
                     <!-- SVG Pet Avatar Container -->
@@ -448,7 +448,7 @@
                     code: '@bg.BackgroundCode',
                     name: '@bg.BackgroundName@(isExpired ? " (限時活動限定已失效)" : "")',
                     cost: @bg.PointsCost,
-                    image: '@imagePath',
+                    image: '@Html.Raw(imagePath)',
                     isExpired: @(isExpired ? "true" : "false"),
                     isOwned: @(isOwned ? "true" : "false")
                 },</text>
@@ -457,12 +457,12 @@
 
         let selectedSkinColor = '@currentSkinColor';
         let selectedBackgroundColor = '@currentBackgroundColor';
-        let selectedBackgroundImage = '@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")';
+        let selectedBackgroundImage = '@Html.Raw($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")';
 
         // 追蹤實際套用的狀態（用於取消按鈕）
         let appliedSkinColor = '@currentSkinColor';
         let appliedBackgroundColor = '@currentBackgroundColor';
-        let appliedBackgroundImage = '@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")';
+        let appliedBackgroundImage = '@Html.Raw($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")';
 
         function initializeSkinColors() {
             const grid = document.getElementById('skinColorGrid');
