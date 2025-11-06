@@ -154,11 +154,11 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				// 獲取電子禮券列表（支持模糊搜尋）
 				var eVouchers = await _walletService.GetUserEVouchersAsync(userId, search);
 
-				// 為每張未使用的電子禮券生成 QR Code
+				// 為所有電子禮券生成 QR Code（包括已使用的，方便查看歷史記錄）
 				var eVoucherList = eVouchers.ToList();
 				var qrCodeData = new Dictionary<int, string>();
 
-				foreach (var voucher in eVoucherList.Where(v => !v.IsUsed))
+				foreach (var voucher in eVoucherList)
 				{
 					// 生成 QR Code 內容（包含禮券代碼和基本信息）
 					var qrContent = $"EVOUCHER:{voucher.EvoucherCode}|ID:{voucher.EvoucherId}|VALUE:{voucher.EvoucherType?.ValueAmount ?? 0}";

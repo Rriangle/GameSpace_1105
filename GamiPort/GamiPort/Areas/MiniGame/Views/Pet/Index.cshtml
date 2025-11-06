@@ -383,21 +383,20 @@
                                 <div class="mb-4">
                                     <div class="d-flex justify-content-between mb-2">
                                         <small class="text-muted">經驗值</small>
-                                        <small class="text-muted">@Model.Experience / @(Model.ExperienceToNextLevel ?? 0)</small>
+                                        <small class="text-muted fw-bold">@Model.Experience / @(Model.ExperienceToNextLevel ?? 0)</small>
                                     </div>
                                     <div class="progress" style="height: 20px;">
                                         <div class="progress-bar"
                                              style="width: @((Model.ExperienceToNextLevel > 0 ? (Model.Experience * 100.0 / Model.ExperienceToNextLevel.Value) : 0).ToString("F2"))%; background: linear-gradient(90deg, #17a2b8 0%, #0d9488 100%);"
                                              role="progressbar">
-                                            @((Model.ExperienceToNextLevel > 0 ? (Model.Experience * 100.0 / Model.ExperienceToNextLevel.Value) : 0).ToString("F1"))%
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Last Interaction Time -->
+                                <!-- Last Level Up Time -->
                                 <div class="info-card">
                                     <i class="bi bi-clock-history me-2"></i>
-                                    <small>最後互動時間：@Model.LevelUpTime.ToUtc8String("yyyy-MM-dd HH:mm")</small>
+                                    <small>最後升級時間：@Model.LevelUpTime.ToUtc8String("yyyy/MM/dd")</small>
                                 </div>
                             </div>
                         </div>
