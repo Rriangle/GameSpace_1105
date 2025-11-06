@@ -459,6 +459,11 @@
         let selectedBackgroundColor = '@currentBackgroundColor';
         let selectedBackgroundImage = '@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")';
 
+        // 追蹤實際套用的狀態（用於取消按鈕）
+        let appliedSkinColor = '@currentSkinColor';
+        let appliedBackgroundColor = '@currentBackgroundColor';
+        let appliedBackgroundImage = '@($"/MiniGame/PetBackgroundCostSettings表格_種子資料_圖片/{currentBackgroundColor}.png")';
+
         function initializeSkinColors() {
             const grid = document.getElementById('skinColorGrid');
             grid.innerHTML = '';
@@ -466,7 +471,7 @@
                 const div = document.createElement('div');
                 const isSelected = option.color === selectedSkinColor;
                 const isDisabled = option.isExpired;
-                const isCurrent = option.color === '@currentSkinColor';
+                const isCurrent = option.color === appliedSkinColor;
 
                 div.className = `color-option ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`;
                 div.dataset.color = option.color;
@@ -501,7 +506,7 @@
                 const div = document.createElement('div');
                 const isSelected = option.code === selectedBackgroundColor;
                 const isDisabled = option.isExpired;
-                const isCurrent = option.code === '@currentBackgroundColor';
+                const isCurrent = option.code === appliedBackgroundColor;
 
                 div.className = `background-option ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`;
                 div.dataset.code = option.code;
@@ -556,7 +561,7 @@
             const confirmBtn = document.getElementById('confirmSkinColor');
             confirmBtn.disabled = false;
 
-            if (color === '@currentSkinColor') {
+            if (color === appliedSkinColor) {
                 confirmBtn.innerHTML = '<i class="bi bi-check-lg me-2"></i>已套用';
                 confirmBtn.disabled = true;
             } else if (isOwned) {
@@ -585,31 +590,25 @@
 
             // 立即更新預覽卡的背景圖片
             const previewCard = document.getElementById('previewCard');
+            console.log('Updating background to:', image);
+
+            // 確保路徑正確
             let imagePath = image;
             if (!imagePath.startsWith('/')) {
                 imagePath = '/' + imagePath;
             }
 
-            previewCard.style.backgroundImage = 'none';
+            // 強制更新背景圖
             previewCard.style.backgroundImage = `url('${imagePath}')`;
             previewCard.style.backgroundSize = 'cover';
             previewCard.style.backgroundPosition = 'center';
             previewCard.style.backgroundRepeat = 'no-repeat';
 
-            // 預載圖片
-            const img = new Image();
-            img.onload = function() {
-                if (selectedBackgroundColor === code) {
-                    previewCard.style.backgroundImage = `url('${imagePath}')`;
-                }
-            };
-            img.src = imagePath;
-
             // Update button text based on ownership
             const confirmBtn = document.getElementById('confirmBackgroundColor');
             confirmBtn.disabled = false;
 
-            if (code === '@currentBackgroundColor') {
+            if (code === appliedBackgroundColor) {
                 confirmBtn.innerHTML = '<i class="bi bi-check-lg me-2"></i>已套用';
                 confirmBtn.disabled = true;
             } else if (isOwned) {
@@ -624,13 +623,60 @@
         }
 
         function resetSkinColorSelection() {
-            // 直接返回寵物頁面，不顯示確認對話框
-            window.location.href = '/MiniGame/Pet';
+            // 恢復到實際套用的膚色
+            selectedSkinColor = appliedSkinColor;
+
+            // 更新預覽
+            if (previewPetAvatar) {
+                previewPetAvatar.updateSkinColor(appliedSkinColor);
+            }
+
+            // 重新初始化選項以更新選中狀態
+            initializeSkinColors();
+
+            // 重置按鈕狀態
+            const confirmBtn = document.getElementById('confirmSkinColor');
+            confirmBtn.innerHTML = '<i class="bi bi-check-lg me-2"></i>已套用';
+            confirmBtn.disabled = true;
+            confirmBtn.dataset.action = '';
+
+            // 更新成本顯示
+            const option = skinColorOptions.find(o => o.color === appliedSkinColor);
+            if (option) {
+                document.getElementById('skinColorCost').textContent = option.cost;
+            }
         }
 
         function resetBackgroundColorSelection() {
-            // 直接返回寵物頁面，不顯示確認對話框
-            window.location.href = '/MiniGame/Pet';
+            // 恢復到實際套用的背景
+            selectedBackgroundColor = appliedBackgroundColor;
+            selectedBackgroundImage = appliedBackgroundImage;
+
+            // 更新預覽卡背景
+            const previewCard = document.getElementById('previewCard');
+            let imagePath = appliedBackgroundImage;
+            if (!imagePath.startsWith('/')) {
+                imagePath = '/' + imagePath;
+            }
+            previewCard.style.backgroundImage = `url('${imagePath}')`;
+            previewCard.style.backgroundSize = 'cover';
+            previewCard.style.backgroundPosition = 'center';
+            previewCard.style.backgroundRepeat = 'no-repeat';
+
+            // 重新初始化選項以更新選中狀態
+            initializeBackgroundColors();
+
+            // 重置按鈕狀態
+            const confirmBtn = document.getElementById('confirmBackgroundColor');
+            confirmBtn.innerHTML = '<i class="bi bi-check-lg me-2"></i>已套用';
+            confirmBtn.disabled = true;
+            confirmBtn.dataset.action = '';
+
+            // 更新成本顯示
+            const option = backgroundColorOptions.find(o => o.code === appliedBackgroundColor);
+            if (option) {
+                document.getElementById('backgroundColorCost').textContent = option.cost;
+            }
         }
 
         // Confirm buttons click handlers
@@ -665,13 +711,16 @@
                         // 自動套用
                         await applySkinColorAfterPurchase(selectedSkinColor);
 
+                        // 更新實際套用的狀態
+                        appliedSkinColor = selectedSkinColor;
+
                         // 更新按鈕狀態和擁有狀態
                         option.isOwned = true;
                         btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>已套用';
                         btn.disabled = true;
                         btn.dataset.action = '';
 
-                        // 重新初始化以更新「已擁有」標籤
+                        // 重新初始化以更新「目前套用」和「已擁有」標籤
                         initializeSkinColors();
                     } else {
                         alert(result.message);
@@ -697,6 +746,10 @@
 
                     if (result.success) {
                         showSuccessMessage(result.message);
+
+                        // 更新實際套用的狀態
+                        appliedSkinColor = selectedSkinColor;
+
                         btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>已套用';
                         btn.disabled = true;
                         btn.dataset.action = '';
@@ -744,13 +797,17 @@
                         // 自動套用
                         await applyBackgroundAfterPurchase(selectedBackgroundColor);
 
+                        // 更新實際套用的狀態
+                        appliedBackgroundColor = selectedBackgroundColor;
+                        appliedBackgroundImage = selectedBackgroundImage;
+
                         // 更新按鈕狀態和擁有狀態
                         option.isOwned = true;
                         btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>已套用';
                         btn.disabled = true;
                         btn.dataset.action = '';
 
-                        // 重新初始化以更新「已擁有」標籤
+                        // 重新初始化以更新「目前套用」和「已擁有」標籤
                         initializeBackgroundColors();
                     } else {
                         alert(result.message);
@@ -776,6 +833,11 @@
 
                     if (result.success) {
                         showSuccessMessage(result.message);
+
+                        // 更新實際套用的狀態
+                        appliedBackgroundColor = selectedBackgroundColor;
+                        appliedBackgroundImage = selectedBackgroundImage;
+
                         btn.innerHTML = '<i class="bi bi-check-lg me-2"></i>已套用';
                         btn.disabled = true;
                         btn.dataset.action = '';
