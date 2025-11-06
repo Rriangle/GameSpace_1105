@@ -179,8 +179,15 @@ namespace GamiPort
 			// MiniGame Area 服務（集中註冊：簽到、寵物、遊戲、錢包、Filters）
 			builder.Services.AddMiniGameServices(builder.Configuration);
 
-		// ★ 背景服務：寵物每日衰減（每日 UTC+8 00:00 自動執行）
-		builder.Services.AddHostedService<PetDailyDecayService>();
+			// MiniGame Area 服務（簽到、寵物、遊戲、錢包等）
+			builder.Services.AddScoped<GamiPort.Areas.MiniGame.Services.ISignInService, GamiPort.Areas.MiniGame.Services.SignInService>();
+			builder.Services.AddScoped<GamiPort.Areas.MiniGame.Services.IPetService, GamiPort.Areas.MiniGame.Services.PetService>();
+			builder.Services.AddScoped<GamiPort.Areas.MiniGame.Services.IWalletService, GamiPort.Areas.MiniGame.Services.WalletService>();
+			builder.Services.AddScoped<GamiPort.Areas.MiniGame.Services.IFuzzySearchService, GamiPort.Areas.MiniGame.Services.FuzzySearchService>();
+			builder.Services.AddScoped<GamiPort.Areas.MiniGame.Services.IGamePlayService, GamiPort.Areas.MiniGame.Services.GamePlayService>();
+
+			// ★ 背景服務：寵物每日衰減（每日 UTC+8 00:00 自動執行）
+			builder.Services.AddHostedService<PetDailyDecayService>();
 			// ------------------------------------------------------------
 			// SignalR（聊天室必備）— 開啟詳細錯誤與穩定心跳
 			// ------------------------------------------------------------
@@ -203,6 +210,16 @@ namespace GamiPort
 				options.IdleTimeout = TimeSpan.FromHours(2);
 			});
 			builder.Services.AddScoped<ILookupService, SqlLookupService>();
+
+			// services
+			builder.Services.AddCors(options =>
+			{
+				options.AddPolicy("ViteDev",
+					p => p.WithOrigins("http://localhost:5173")
+						  .AllowAnyHeader()
+						  .AllowAnyMethod()
+						  .AllowCredentials());
+			});
 
 			// ========== ★ ECPay 服務註冊（唯一需要的兩行） ==========
 			builder.Services.AddHttpContextAccessor();                         // BuildCreditRequest 會用到
@@ -262,6 +279,7 @@ namespace GamiPort
 
 			// ✅ CORS 要在 Routing 後、Auth 前
 			app.UseCors("SupportCors");
+			app.UseCors("ViteDev");
 
 			// 訂單組使用
 			app.UseSession();     // 必須在 Auth 之前
