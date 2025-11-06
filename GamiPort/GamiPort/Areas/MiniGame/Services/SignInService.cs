@@ -49,6 +49,11 @@ namespace GamiPort.Areas.MiniGame.Services
 			var isSignedInToday = userSignIns.Any(x =>
 				x.SignTime >= utcTodayStart && x.SignTime <= utcTodayEnd);
 
+			// 如果今天已簽到，取得今日簽到記錄（用於顯示實際獲得的獎勵）
+			var todaySignInRecord = isSignedInToday
+				? userSignIns.FirstOrDefault(x => x.SignTime >= utcTodayStart && x.SignTime <= utcTodayEnd)
+				: null;
+
 			// 計算總簽到天數
 			int totalSignInDays = userSignIns.Count;
 
@@ -77,6 +82,9 @@ namespace GamiPort.Areas.MiniGame.Services
 				TodayPoints = todayPoints,
 				TodayExperience = todayExperience,
 				TodayHasCoupon = todayHasCoupon,
+				ActualPointsGained = todaySignInRecord?.PointsGained,
+				ActualExpGained = todaySignInRecord?.ExpGained,
+				ActualCouponGained = todaySignInRecord?.CouponGained,
 				LastSignInTime = lastSignInTime,
 				UpdatedAt = appNow.ToUtc8()
 			};

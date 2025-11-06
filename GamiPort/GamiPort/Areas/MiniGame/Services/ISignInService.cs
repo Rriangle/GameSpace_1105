@@ -79,6 +79,15 @@ namespace GamiPort.Areas.MiniGame.Services
 		/// <summary>今天是否會獲得優惠券</summary>
 		public bool TodayHasCoupon { get; set; }
 
+		/// <summary>實際獲得的點數（已簽到時才有值）</summary>
+		public int? ActualPointsGained { get; set; }
+
+		/// <summary>實際獲得的經驗（已簽到時才有值）</summary>
+		public int? ActualExpGained { get; set; }
+
+		/// <summary>實際獲得的優惠券代碼（已簽到時才有值）</summary>
+		public string? ActualCouponGained { get; set; }
+
 		/// <summary>上次簽到時間（UTC+8 格式）</summary>
 		public DateTime? LastSignInTime { get; set; }
 

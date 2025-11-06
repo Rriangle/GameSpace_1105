@@ -216,13 +216,13 @@
 				this.disabled = true;
 				this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>兌換中...';
 
+				const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
 				fetch('@Url.Action("ExchangeForCoupon", "Wallet")', {
 					method: 'POST',
 					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-						'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+						'Content-Type': 'application/x-www-form-urlencoded'
 					},
-					body: `couponTypeId=${couponId}&quantity=${quantity}`
+					body: `couponTypeId=${couponId}&quantity=${quantity}&__RequestVerificationToken=${encodeURIComponent(token)}`
 				})
 				.then(response => response.json())
 				.then(data => {
@@ -279,13 +279,13 @@
 				this.disabled = true;
 				this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>兌換中...';
 
+				const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
 				fetch('@Url.Action("ExchangeForEVoucher", "Wallet")', {
 					method: 'POST',
 					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-						'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+						'Content-Type': 'application/x-www-form-urlencoded'
 					},
-					body: `evoucherTypeId=${evoucherId}&quantity=${quantity}`
+					body: `evoucherTypeId=${evoucherId}&quantity=${quantity}&__RequestVerificationToken=${encodeURIComponent(token)}`
 				})
 				.then(response => response.json())
 				.then(data => {
