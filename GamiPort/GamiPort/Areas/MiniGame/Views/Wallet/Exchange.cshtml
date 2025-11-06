@@ -6,6 +6,11 @@
 }
 
 <div class="container-fluid px-4">
+	<!-- Anti-Forgery Token -->
+	<form id="antiForgeryForm" style="display:none;">
+		@Html.AntiForgeryToken()
+	</form>
+
 	<h1 class="mt-4 text-info">
 		<i class="fas fa-exchange-alt me-2"></i>點數兌換
 	</h1>
