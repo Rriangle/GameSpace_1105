@@ -232,6 +232,10 @@ namespace GamiPort.Areas.MiniGame.Services
 						pet.Experience += bonusExp;
 						statChanges["experience"] = bonusExp;
 
+						// 記錄升級前的等級
+						int oldLevel = pet.Level;
+						int totalLevelUpRewards = 0;
+
 						// 檢查升級（內嵌升級邏輯，避免重複事務）
 						var requiredExp = await GetRequiredExpForLevelAsync(pet.Level + 1);
 						while (pet.Experience >= requiredExp && requiredExp > 0)
@@ -244,6 +248,7 @@ namespace GamiPort.Areas.MiniGame.Services
 							// 計算升級獎勵
 							var pointsReward = CalculateLevelUpReward(pet.Level);
 							wallet.UserPoint += pointsReward;
+							totalLevelUpRewards += pointsReward;
 
 							// 記錄升級獎勵到錢包歷史
 							_context.WalletHistories.Add(new WalletHistory
@@ -259,6 +264,15 @@ namespace GamiPort.Areas.MiniGame.Services
 
 							// 檢查下一級
 							requiredExp = await GetRequiredExpForLevelAsync(pet.Level + 1);
+						}
+
+						// 記錄升級信息到statChanges
+						if (pet.Level > oldLevel)
+						{
+							statChanges["leveledUp"] = 1;
+							statChanges["oldLevel"] = oldLevel;
+							statChanges["newLevel"] = pet.Level;
+							statChanges["levelUpRewards"] = totalLevelUpRewards;
 						}
 
 						// 發放會員點數（如果有配置）
@@ -298,6 +312,12 @@ namespace GamiPort.Areas.MiniGame.Services
 				var expToNext = await GetRequiredExpForLevelAsync(pet.Level + 1);
 				pet.ExperienceToNextLevel = expToNext;
 
+				// 提取升級信息
+				bool leveledUp = statChanges.ContainsKey("leveledUp");
+				int resultOldLevel = statChanges.ContainsKey("oldLevel") ? statChanges["oldLevel"] : pet.Level;
+				int resultNewLevel = statChanges.ContainsKey("newLevel") ? statChanges["newLevel"] : pet.Level;
+				int levelUpRewards = statChanges.ContainsKey("levelUpRewards") ? statChanges["levelUpRewards"] : 0;
+
 				return new PetInteractionResult
 				{
 					Success = true,
@@ -307,7 +327,11 @@ namespace GamiPort.Areas.MiniGame.Services
 					HealthRecovered = healthRecovered,
 					IsFirstDailyFullStats = isFirstDailyFullStats,
 					BonusExperience = bonusExp,
-					BonusPoints = bonusPoints
+					BonusPoints = bonusPoints,
+					LeveledUp = leveledUp,
+					OldLevel = resultOldLevel,
+					NewLevel = resultNewLevel,
+					LevelUpRewards = levelUpRewards
 				};
 			}
 			catch (Exception ex)

@@ -55,9 +55,31 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				return View("Index");
 			}
 
-			// 重新計算下一級所需經驗值（確保顯示正確）
-			var expToNext = await _petService.GetRequiredExpForLevelAsync(pet.Level + 1);
-			pet.ExperienceToNextLevel = expToNext;
+			// 模擬升級計算顯示值（不修改數據庫，只用於正確顯示進度條）
+			int displayLevel = pet.Level;
+			int displayExperience = pet.Experience;
+
+			while (true)
+			{
+				var requiredExp = await _petService.GetRequiredExpForLevelAsync(displayLevel + 1);
+				if (requiredExp > 0 && displayExperience >= requiredExp)
+				{
+					displayLevel++;
+					displayExperience -= requiredExp;
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			// 計算顯示用的下一級經驗需求
+			var expToNext = await _petService.GetRequiredExpForLevelAsync(displayLevel + 1);
+
+			// 傳遞顯示值給View（不修改pet實體）
+			ViewBag.DisplayLevel = displayLevel;
+			ViewBag.DisplayExperience = displayExperience;
+			ViewBag.DisplayExpToNext = expToNext;
 
 			// 獲取錢包信息
 			var wallet = await _context.UserWallets

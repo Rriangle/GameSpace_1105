@@ -149,6 +149,22 @@ namespace GamiPort.Areas.MiniGame.Services
 		/// 獎勵會員點數
 		/// </summary>
 		public int BonusPoints { get; set; }
+		/// <summary>
+		/// 是否升級了
+		/// </summary>
+		public bool LeveledUp { get; set; }
+		/// <summary>
+		/// 升級前的等級
+		/// </summary>
+		public int OldLevel { get; set; }
+		/// <summary>
+		/// 升級後的新等級
+		/// </summary>
+		public int NewLevel { get; set; }
+		/// <summary>
+		/// 升級獎勵點數（總和）
+		/// </summary>
+		public int LevelUpRewards { get; set; }
 	}
 
 	/// <summary>

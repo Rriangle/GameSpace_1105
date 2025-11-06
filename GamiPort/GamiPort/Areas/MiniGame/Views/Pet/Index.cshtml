@@ -804,15 +804,15 @@
                         <div class="compact-exp-card mb-3">
                             <div class="compact-exp-header">
                                 <i class="bi bi-star-fill"></i>
-                                <span>LV. @Model.Level</span>
+                                <span>LV. @ViewBag.DisplayLevel</span>
                             </div>
                             <div class="compact-exp-bar-wrapper">
                                 <div class="compact-exp-bar" id="experience-bar"
-                                     style="width: @((Model.ExperienceToNextLevel > 0 ? Math.Min(100, (Model.Experience * 100.0 / Model.ExperienceToNextLevel.Value)) : 0).ToString("F2"))%;">
+                                     style="width: @((ViewBag.DisplayExpToNext > 0 ? Math.Min(100, (ViewBag.DisplayExperience * 100.0 / ViewBag.DisplayExpToNext)) : 0).ToString("F2"))%;">
                                 </div>
                             </div>
                             <div class="compact-exp-text">
-                                <small id="experience-text">@Model.Experience / @(Model.ExperienceToNextLevel ?? 0)</small>
+                                <small id="experience-text">@ViewBag.DisplayExperience / @ViewBag.DisplayExpToNext</small>
                             </div>
                         </div>
 
@@ -1080,17 +1080,17 @@
                     <div class="modal-body">
                         <div class="text-center mb-3">
                             <div class="level-badge" style="font-size: 1.5rem; padding: 1rem 2rem;">
-                                等級 @Model.Level
+                                等級 @ViewBag.DisplayLevel
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="stat-label">當前經驗值</span>
-                                <span class="fw-bold text-teal" id="current-exp-display">@Model.Experience</span>
+                                <span class="fw-bold text-teal" id="current-exp-display">@ViewBag.DisplayExperience</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="stat-label">升級所須經驗值</span>
-                                <span class="fw-bold text-teal" id="required-exp-display">@(Model.ExperienceToNextLevel ?? 0)</span>
+                                <span class="fw-bold text-teal" id="required-exp-display">@ViewBag.DisplayExpToNext</span>
                             </div>
                             <div class="d-flex justify-content-between">
                                 <span class="stat-label">最後升級時間</span>
@@ -1107,6 +1107,42 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 升級通知 Modal -->
+        <div class="modal fade" id="levelUpNotificationModal" tabindex="-1" aria-labelledby="levelUpNotificationLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="border: 3px solid #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #333; border: none;">
+                        <h5 class="modal-title w-100 text-center" id="levelUpNotificationLabel" style="font-weight: bold; font-size: 1.8rem;">
+                            <i class="bi bi-star-fill me-2" style="color: #ff6b6b;"></i>
+                            LEVEL UP!
+                            <i class="bi bi-star-fill ms-2" style="color: #ff6b6b;"></i>
+                        </h5>
+                    </div>
+                    <div class="modal-body text-center py-4">
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-center align-items-center" style="font-size: 2rem; font-weight: bold;">
+                                <span id="levelUpOldLevel" style="color: #666;">1</span>
+                                <i class="bi bi-arrow-right mx-3" style="color: #17a2b8;"></i>
+                                <span id="levelUpNewLevel" style="color: #ff6b6b; font-size: 2.5rem;">2</span>
+                            </div>
+                        </div>
+                        <div class="alert alert-success mb-0" style="background-color: #d4edda; border-color: #c3e6cb;">
+                            <i class="bi bi-gift-fill me-2" style="color: #28a745;"></i>
+                            <span style="font-size: 1.2rem; font-weight: bold;">獲得獎勵</span>
+                            <div class="mt-2" style="font-size: 1.5rem; color: #ff6b6b;">
+                                +<span id="levelUpRewards">0</span> 會員點數
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center" style="border: none;">
+                        <button type="button" class="btn btn-primary btn-lg" data-bs-dismiss="modal" style="background: linear-gradient(135deg, #17a2b8 0%, #0d9488 100%); border: none; padding: 0.5rem 2rem;">
+                            <i class="bi bi-check-circle me-2"></i>太棒了！
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1137,7 +1173,7 @@
                     stamina: @Model.Stamina,
                     cleanliness: @Model.Cleanliness,
                     health: @Model.Health,
-                    level: @Model.Level
+                    level: @ViewBag.DisplayLevel
                 });
             }
         });
@@ -1208,6 +1244,17 @@
                     const finalMessage = displayMessages.length > 0
                         ? displayMessages.join('、')
                         : result.message;
+
+                    // 檢查是否升級
+                    if (result.leveledUp && result.newLevel > result.oldLevel) {
+                        // 播放升級動畫
+                        if (petAvatar) {
+                            petAvatar.playLevelUpEffect(result.newLevel, result.levelUpRewards);
+                        }
+
+                        // 顯示升級提示
+                        showLevelUpNotification(result.oldLevel, result.newLevel, result.levelUpRewards);
+                    }
 
                     // 顯示成功消息
                     showResult(true, finalMessage, result.statChanges, result.isFirstDailyFullStats, result.bonusExperience, result.bonusPoints);
@@ -1433,6 +1480,21 @@
             setTimeout(() => {
                 resultDiv.classList.remove('show');
             }, 6000);
+        }
+
+        // 顯示升級通知
+        function showLevelUpNotification(oldLevel, newLevel, rewards) {
+            // 更新模態框內容
+            document.getElementById('levelUpOldLevel').textContent = oldLevel;
+            document.getElementById('levelUpNewLevel').textContent = newLevel;
+            document.getElementById('levelUpRewards').textContent = rewards;
+
+            // 顯示模態框
+            const modal = new bootstrap.Modal(document.getElementById('levelUpNotificationModal'));
+            modal.show();
+
+            // 可選：添加慶祝音效（如果有的話）
+            // playSound('level-up');
         }
 
         function getStatLabel(stat) {
