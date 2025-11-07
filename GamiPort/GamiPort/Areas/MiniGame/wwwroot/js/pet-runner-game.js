@@ -44,10 +44,11 @@ class PetRunnerGame {
         this.groundY = this.canvas.height - 60;
         this.pet.y = this.groundY - this.pet.height;
 
-        // 障礙物
+        // 障礙物（參考 dino-game 使用時間間隔）
         this.obstacles = [];
-        this.obstacleFrequency = 120; // 幀數
-        this.obstacleTimer = 0;
+        this.OBSTACLE_INTERVAL_MIN = 500; // 毫秒
+        this.OBSTACLE_INTERVAL_MAX = 2000; // 毫秒
+        this.nextObstacleInterval = this.getRandomNumber(this.OBSTACLE_INTERVAL_MIN, this.OBSTACLE_INTERVAL_MAX);
 
         // 雲朵（背景裝飾）
         this.clouds = [];
@@ -56,8 +57,9 @@ class PetRunnerGame {
         // 粒子特效
         this.particles = [];
 
-        // 動畫幀
+        // 動畫幀與時間追蹤
         this.animationFrame = null;
+        this.previousTime = null;
 
         // 鍵盤控制
         this.setupControls();
@@ -81,6 +83,13 @@ class PetRunnerGame {
         if (!this.pet.jumping) {
             this.pet.y = this.groundY - this.pet.height;
         }
+    }
+
+    /**
+     * 獲取隨機數（參考 dino-game）
+     */
+    getRandomNumber(min, max) {
+        return Math.floor(Math.random() * (max - min + 1) + min);
     }
 
     /**
@@ -136,12 +145,13 @@ class PetRunnerGame {
         this.score = 0;
         this.gameSpeed = this.getDifficultySpeed();
         this.obstacles = [];
-        this.obstacleTimer = 0;
+        this.nextObstacleInterval = this.getRandomNumber(this.OBSTACLE_INTERVAL_MIN, this.OBSTACLE_INTERVAL_MAX);
+        this.previousTime = null;
         this.pet.velocityY = 0;
         this.pet.jumping = false;
         this.pet.y = this.groundY - this.pet.height;
 
-        this.gameLoop();
+        this.gameLoop(performance.now());
     }
 
     /**
@@ -184,26 +194,35 @@ class PetRunnerGame {
     }
 
     /**
-     * 遊戲主循環
+     * 遊戲主循環（參考 dino-game 使用時間差）
      */
-    gameLoop() {
+    gameLoop(currentTime) {
         if (this.gameState !== 'playing') return;
 
-        this.update();
+        if (this.previousTime === null) {
+            this.previousTime = currentTime;
+            this.animationFrame = requestAnimationFrame((time) => this.gameLoop(time));
+            return;
+        }
+
+        const frameTimeDelta = currentTime - this.previousTime;
+        this.previousTime = currentTime;
+
+        this.update(frameTimeDelta);
         this.render();
 
-        this.animationFrame = requestAnimationFrame(() => this.gameLoop());
+        this.animationFrame = requestAnimationFrame((time) => this.gameLoop(time));
     }
 
     /**
      * 更新遊戲狀態
      */
-    update() {
+    update(frameTimeDelta) {
         // 更新寵物物理
         this.updatePet();
 
         // 更新障礙物
-        this.updateObstacles();
+        this.updateObstacles(frameTimeDelta);
 
         // 更新雲朵
         this.updateClouds();
@@ -246,17 +265,15 @@ class PetRunnerGame {
     }
 
     /**
-     * 更新障礙物
+     * 更新障礙物（參考 dino-game 使用時間間隔）
      */
-    updateObstacles() {
+    updateObstacles(frameTimeDelta) {
         // 生成新障礙物
-        this.obstacleTimer++;
-        if (this.obstacleTimer > this.obstacleFrequency) {
+        if (this.nextObstacleInterval <= 0) {
             this.createObstacle();
-            this.obstacleTimer = 0;
-            // 隨機調整生成頻率
-            this.obstacleFrequency = Math.random() * 60 + 80;
+            this.nextObstacleInterval = this.getRandomNumber(this.OBSTACLE_INTERVAL_MIN, this.OBSTACLE_INTERVAL_MAX);
         }
+        this.nextObstacleInterval -= frameTimeDelta;
 
         // 更新障礙物位置
         this.obstacles.forEach((obstacle, index) => {
@@ -328,15 +345,14 @@ class PetRunnerGame {
     }
 
     /**
-     * AABB 碰撞檢測（參考 dino-game 實作）
-     * 使用 adjustBy 縮小碰撞箱，讓遊戲更寬容
+     * 標準 AABB 碰撞檢測
+     * 只要重疊一點點就判定為碰撞（不使用 margin 或 adjustBy）
      */
     isColliding(rect1, rect2) {
-        const adjustBy = 1.4;
-        return rect1.x < rect2.x + rect2.width / adjustBy &&
-               rect1.x + rect1.width / adjustBy > rect2.x &&
-               rect1.y < rect2.y + rect2.height / adjustBy &&
-               rect1.y + rect1.height / adjustBy > rect2.y;
+        return rect1.x < rect2.x + rect2.width &&
+               rect1.x + rect1.width > rect2.x &&
+               rect1.y < rect2.y + rect2.height &&
+               rect1.y + rect1.height > rect2.y;
     }
 
     /**
