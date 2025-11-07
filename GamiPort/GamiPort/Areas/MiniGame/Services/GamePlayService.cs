@@ -127,10 +127,10 @@ namespace GamiPort.Areas.MiniGame.Services
 				// 自動計算用戶下一次應挑戰的關卡
 				int level = await GetUserNextGameLevelAsync(userId);
 
-				// 檢查用戶是否存在
+				// 檢查用戶是否存在且未被鎖定（檢查 UserLockoutEnd 是否為 null 或已過期）
 				var user = await _context.Users
 					.AsNoTracking()
-					.FirstOrDefaultAsync(u => u.UserId == userId && !u.UserLockoutEnabled);
+					.FirstOrDefaultAsync(u => u.UserId == userId && (u.UserLockoutEnd == null || u.UserLockoutEnd <= _appClock.UtcNow));
 
 				if (user == null)
 				{
