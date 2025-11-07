@@ -835,6 +835,20 @@ else
                 if (result.success) {
                     currentGameSessionId = result.sessionId;
 
+                    // Initialize game with level configuration from backend
+                    if (petRunnerGame) {
+                        petRunnerGame.destroy();
+                    }
+
+                    const baseSpeed = 3;
+                    petRunnerGame = new PetRunnerGame('gameCanvas', {
+                        level: result.level,
+                        monsterCount: result.monsterCount,
+                        gameSpeed: baseSpeed * result.speedMultiplier,
+                        petColor: '@Html.Raw(ViewBag.PetSkinColor ?? "#ff6b6b")',
+                        onGameEnd: handleGameEnd
+                    });
+
                     // Hide overlay and start game
                     const overlay = document.getElementById('game-start-overlay');
                     if (overlay) {
@@ -861,6 +875,7 @@ else
             }
 
             try {
+                // gameData format: { result: 'win'/'lose', monstersDodged, targetCount, level }
                 // Call backend API to end game and get rewards
                 const response = await fetch('/MiniGame/Game/EndGame', {
                     method: 'POST',
@@ -868,7 +883,7 @@ else
                         'Content-Type': 'application/x-www-form-urlencoded',
                         'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
                     },
-                    body: `sessionId=${currentGameSessionId}&result=${gameData.result}&score=${gameData.score}`
+                    body: `playId=${currentGameSessionId}&level=${gameData.level}&result=${gameData.result}&points=0&experience=0`
                 });
 
                 const result = await response.json();
@@ -879,10 +894,11 @@ else
                     if (overlay) {
                         overlay.innerHTML = `
                             <div style="text-align: center; padding: 2rem;">
-                                <i class="bi bi-${gameData.result === 'win' ? 'check-circle-fill' : 'x-circle-fill'}"
-                                   style="font-size: 4rem; color: ${gameData.result === 'win' ? '#28a745' : '#e74c3c'}; margin-bottom: 1rem;"></i>
-                                <h3 style="color: #2c3e50; margin-bottom: 1rem;">${gameData.result === 'win' ? '恭喜通關！' : '未能通關'}</h3>
-                                <p style="font-size: 1.5rem; font-weight: 700; color: var(--teal-primary); margin-bottom: 0.5rem;">得分：${gameData.score}</p>
+                                <i class="bi bi-${gameData.result === 'win' ? 'trophy-fill' : 'x-circle-fill'}"
+                                   style="font-size: 4rem; color: ${gameData.result === 'win' ? '#ffd700' : '#e74c3c'}; margin-bottom: 1rem;"></i>
+                                <h3 style="color: #2c3e50; margin-bottom: 1rem;">${gameData.result === 'win' ? '🎉 恭喜過關！' : '😢 遊戲失敗'}</h3>
+                                <p style="font-size: 1.2rem; color: #495057; margin-bottom: 0.5rem;">躲過了 ${gameData.monstersDodged} / ${gameData.targetCount} 隻怪物</p>
+                                <p style="font-size: 1.1rem; color: #6c757d; margin-bottom: 1rem;">第 ${gameData.level} 關</p>
                                 ${result.rewardPoints > 0 ? `<p style="color: #28a745; font-size: 1.1rem; margin-bottom: 0.5rem;">💰 獲得點數: +${result.rewardPoints}</p>` : ''}
                                 ${result.rewardExperience > 0 ? `<p style="color: #ffa500; font-size: 1.1rem; margin-bottom: 1rem;">⭐ 獲得經驗: +${result.rewardExperience}</p>` : ''}
                                 <button onclick="location.reload()" class="btn" style="background: var(--teal-primary); color: white; border-radius: 12px; padding: 0.75rem 1.5rem; border: none; cursor: pointer; font-weight: 600;">

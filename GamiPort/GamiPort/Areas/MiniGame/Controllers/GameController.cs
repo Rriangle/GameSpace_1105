@@ -12,17 +12,20 @@ namespace GamiPort.Areas.MiniGame.Controllers
 		private readonly GameSpacedatabaseContext _context;
 		private readonly IAppCurrentUser _appCurrentUser;
 		private readonly IGamePlayService _gamePlayService;
+		private readonly IPetService _petService;
 		private readonly ILogger<GameController> _logger;
 
 		public GameController(
 			GameSpacedatabaseContext context,
 			IAppCurrentUser appCurrentUser,
 			IGamePlayService gamePlayService,
+			IPetService petService,
 			ILogger<GameController> logger)
 		{
 			_context = context;
 			_appCurrentUser = appCurrentUser;
 			_gamePlayService = gamePlayService;
+			_petService = petService;
 			_logger = logger;
 		}
 
@@ -54,6 +57,11 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				// 獲取今日剩餘遊戲次數
 				int remainingPlays = await _gamePlayService.GetUserRemainingPlaysAsync(userId);
 
+				// 獲取用戶寵物資料（用於顯示在遊戲畫面）
+				var pet = await _petService.GetUserPetAsync(userId);
+				string petSkinColor = pet?.SkinColor ?? "#ff6b6b";
+				string petName = pet?.PetName ?? "寵物";
+
 				// 傳遞資料到視圖
 				ViewBag.TodayRemainingPlays = remainingPlays;
 				ViewBag.UserId = userId;
@@ -61,6 +69,8 @@ namespace GamiPort.Areas.MiniGame.Controllers
 				ViewBag.GameResult = gameResult;
 				ViewBag.RewardPoints = rewardPoints ?? 0;
 				ViewBag.RewardExperience = rewardExperience ?? 0;
+				ViewBag.PetSkinColor = petSkinColor;
+				ViewBag.PetName = petName;
 
 				// TODO: 獲取統計數據
 				ViewBag.MonthlyWins = 0; // await _gamePlayService.GetMonthlyWinsAsync(userId);
@@ -130,6 +140,23 @@ namespace GamiPort.Areas.MiniGame.Controllers
 					// 獲取剩餘次數
 					int remainingPlays = await _gamePlayService.GetUserRemainingPlaysAsync(userId);
 
+					// 根據關卡決定配置（怪物數量、速度倍率）
+					int monsterCount = level switch
+					{
+						1 => 6,
+						2 => 8,
+						3 => 10,
+						_ => 6
+					};
+
+					decimal speedMultiplier = level switch
+					{
+						1 => 1.0m,
+						2 => 1.5m,
+						3 => 2.0m,
+						_ => 1.0m
+					};
+
 					// 儲存遊戲 ID 和關卡到 TempData 供遊戲結束時使用
 					TempData["CurrentPlayId"] = playId;
 					TempData["CurrentLevel"] = level;
@@ -139,7 +166,9 @@ namespace GamiPort.Areas.MiniGame.Controllers
 						message = message,
 						sessionId = playId,
 						level = level,
-						remainingPlays = remainingPlays
+						remainingPlays = remainingPlays,
+						monsterCount = monsterCount,
+						speedMultiplier = speedMultiplier
 					});
 				}
 				else

@@ -16,17 +16,18 @@ class PetRunnerGame {
         this.options = {
             petColor: options.petColor || '#ff6b6b',
             backgroundColor: options.backgroundColor || '#f0f4f8',
-            onGameOver: options.onGameOver || null,
-            onScoreUpdate: options.onScoreUpdate || null,
-            difficulty: options.difficulty || 'normal', // easy, normal, hard
+            onGameEnd: options.onGameEnd || null, // 遊戲結束回調（勝利/失敗）
+            level: options.level || 1, // 關卡等級（1-3）
+            monsterCount: options.monsterCount || 6, // 需要躲過的怪物數量
+            gameSpeed: options.gameSpeed || 3, // 遊戲速度（根據關卡）
             ...options
         };
 
         // 遊戲狀態
-        this.gameState = 'ready'; // ready, playing, paused, gameOver
-        this.score = 0;
-        this.highScore = localStorage.getItem('petRunnerHighScore') || 0;
-        this.gameSpeed = 3;
+        this.gameState = 'ready'; // ready, playing, paused, gameOver, victory
+        this.monstersDodged = 0; // 已躲過的怪物數量
+        this.targetMonsterCount = this.options.monsterCount; // 目標怪物數量
+        this.gameSpeed = this.options.gameSpeed;
         this.gravity = 0.6;
 
         // 寵物（玩家）
@@ -142,8 +143,9 @@ class PetRunnerGame {
         if (this.gameState === 'playing') return;
 
         this.gameState = 'playing';
-        this.score = 0;
-        this.gameSpeed = this.getDifficultySpeed();
+        this.monstersDodged = 0;
+        this.targetMonsterCount = this.options.monsterCount;
+        this.gameSpeed = this.options.gameSpeed;
         this.obstacles = [];
         this.nextObstacleInterval = this.getRandomNumber(this.OBSTACLE_INTERVAL_MIN, this.OBSTACLE_INTERVAL_MAX);
         this.previousTime = null;
@@ -233,15 +235,9 @@ class PetRunnerGame {
         // 碰撞檢測
         this.checkCollisions();
 
-        // 更新分數
-        this.score += 1;
-        if (this.options.onScoreUpdate) {
-            this.options.onScoreUpdate(Math.floor(this.score / 10));
-        }
-
-        // 逐漸提升難度
-        if (this.score % 500 === 0) {
-            this.gameSpeed += 0.2;
+        // 檢查勝利條件：躲過足夠數量的怪物
+        if (this.monstersDodged >= this.targetMonsterCount) {
+            this.victory();
         }
     }
 
@@ -268,8 +264,8 @@ class PetRunnerGame {
      * 更新障礙物（參考 dino-game 使用時間間隔）
      */
     updateObstacles(frameTimeDelta) {
-        // 生成新障礙物
-        if (this.nextObstacleInterval <= 0) {
+        // 生成新障礙物（只有未達到目標數量時才生成）
+        if (this.monstersDodged < this.targetMonsterCount && this.nextObstacleInterval <= 0) {
             this.createObstacle();
             this.nextObstacleInterval = this.getRandomNumber(this.OBSTACLE_INTERVAL_MIN, this.OBSTACLE_INTERVAL_MAX);
         }
@@ -279,9 +275,13 @@ class PetRunnerGame {
         this.obstacles.forEach((obstacle, index) => {
             obstacle.x -= this.gameSpeed;
 
-            // 移除離開螢幕的障礙物
+            // 移除離開螢幕的障礙物，並增加已躲過計數
             if (obstacle.x + obstacle.width < 0) {
                 this.obstacles.splice(index, 1);
+                if (!obstacle.counted) {
+                    this.monstersDodged++;
+                    obstacle.counted = true;
+                }
             }
         });
     }
@@ -356,25 +356,43 @@ class PetRunnerGame {
     }
 
     /**
-     * 遊戲結束
+     * 遊戲結束（失敗）
      */
     gameOver() {
         this.gameState = 'gameOver';
         cancelAnimationFrame(this.animationFrame);
 
-        // 更新最高分
-        const finalScore = Math.floor(this.score / 10);
-        if (finalScore > this.highScore) {
-            this.highScore = finalScore;
-            localStorage.setItem('petRunnerHighScore', this.highScore);
-        }
-
         // 觸發回調
-        if (this.options.onGameOver) {
-            this.options.onGameOver(finalScore);
+        if (this.options.onGameEnd) {
+            this.options.onGameEnd({
+                result: 'lose',
+                monstersDodged: this.monstersDodged,
+                targetCount: this.targetMonsterCount,
+                level: this.options.level
+            });
         }
 
         this.createGameOverParticles();
+    }
+
+    /**
+     * 遊戲勝利
+     */
+    victory() {
+        this.gameState = 'victory';
+        cancelAnimationFrame(this.animationFrame);
+
+        // 觸發回調
+        if (this.options.onGameEnd) {
+            this.options.onGameEnd({
+                result: 'win',
+                monstersDodged: this.monstersDodged,
+                targetCount: this.targetMonsterCount,
+                level: this.options.level
+            });
+        }
+
+        this.createVictoryParticles();
     }
 
     /**
@@ -631,24 +649,26 @@ class PetRunnerGame {
         const ctx = this.ctx;
         const canvas = this.canvas;
 
-        // 分數
+        // 進度顯示：已躲過 / 目標數量
         ctx.fillStyle = '#2c3e50';
         ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'right';
-        ctx.fillText(`分數: ${Math.floor(this.score / 10)}`, canvas.width - 20, 40);
+        ctx.fillText(`進度: ${this.monstersDodged} / ${this.targetMonsterCount}`, canvas.width - 20, 40);
 
-        // 最高分
-        ctx.font = '16px Arial';
-        ctx.fillText(`最高: ${this.highScore}`, canvas.width - 20, 65);
+        // 關卡等級
+        ctx.font = '18px Arial';
+        ctx.fillText(`第 ${this.options.level} 關`, canvas.width - 20, 70);
 
         // 遊戲狀態提示
         if (this.gameState === 'ready') {
             this.renderCenterText('按 SPACE 或點擊開始', 30);
-            this.renderCenterText('躲避怪物！', 60, '20px');
+            this.renderCenterText(`躲過 ${this.targetMonsterCount} 隻怪物即可過關！`, 60, '20px');
         } else if (this.gameState === 'gameOver') {
-            this.renderCenterText('遊戲結束！', 30);
-            this.renderCenterText(`得分: ${Math.floor(this.score / 10)}`, 60, '24px');
-            this.renderCenterText('按 ENTER 或點擊重新開始', 95, '18px');
+            this.renderCenterText('遊戲失敗！', 30, '40px');
+            this.renderCenterText(`躲過了 ${this.monstersDodged} / ${this.targetMonsterCount} 隻怪物`, 60, '24px');
+        } else if (this.gameState === 'victory') {
+            this.renderCenterText('🎉 恭喜過關！🎉', 30, '40px');
+            this.renderCenterText(`成功躲過 ${this.targetMonsterCount} 隻怪物！`, 60, '24px');
         } else if (this.gameState === 'paused') {
             this.renderCenterText('暫停', 30);
         }
@@ -712,22 +732,32 @@ class PetRunnerGame {
     }
 
     /**
-     * 根據難度獲取初始速度
+     * 創建勝利粒子
      */
-    getDifficultySpeed() {
-        const speeds = {
-            easy: 2.5,
-            normal: 3.5,
-            hard: 5
-        };
-        return speeds[this.options.difficulty] || 3.5;
+    createVictoryParticles() {
+        for (let i = 0; i < 30; i++) {
+            this.particles.push({
+                x: this.pet.x + 25,
+                y: this.pet.y + 25,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                size: Math.random() * 6 + 4,
+                color: ['#ffd700', '#ffed4e', '#ffc107'][Math.floor(Math.random() * 3)],
+                life: 80,
+                maxLife: 80
+            });
+        }
     }
 
     /**
-     * 獲取當前分數
+     * 獲取遊戲進度資訊
      */
-    getScore() {
-        return Math.floor(this.score / 10);
+    getProgress() {
+        return {
+            monstersDodged: this.monstersDodged,
+            targetCount: this.targetMonsterCount,
+            level: this.options.level
+        };
     }
 
     /**
