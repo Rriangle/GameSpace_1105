@@ -278,7 +278,7 @@ class PetRunnerGame {
 
         const obstacle = {
             x: this.canvas.width,
-            y: this.groundY,
+            y: this.groundY - 50, // y 代表頂部位置（groundY - height）
             width: 40,
             height: 50,
             type: type
@@ -328,15 +328,15 @@ class PetRunnerGame {
     }
 
     /**
-     * AABB 碰撞檢測
+     * AABB 碰撞檢測（參考 dino-game 實作）
+     * 使用 adjustBy 縮小碰撞箱，讓遊戲更寬容
      */
     isColliding(rect1, rect2) {
-        // 稍微縮小碰撞箱，讓遊戲更寬容
-        const margin = 8;
-        return rect1.x + margin < rect2.x + rect2.width &&
-               rect1.x + rect1.width - margin > rect2.x &&
-               rect1.y + margin < rect2.y + rect2.height &&
-               rect1.y + rect1.height - margin > rect2.y;
+        const adjustBy = 1.4;
+        return rect1.x < rect2.x + rect2.width / adjustBy &&
+               rect1.x + rect1.width / adjustBy > rect2.x &&
+               rect1.y < rect2.y + rect2.height / adjustBy &&
+               rect1.y + rect1.height / adjustBy > rect2.y;
     }
 
     /**
@@ -532,7 +532,7 @@ class PetRunnerGame {
     renderMonster(obstacle) {
         const ctx = this.ctx;
         const x = obstacle.x;
-        const y = obstacle.y - obstacle.height;
+        const y = obstacle.y; // obstacle.y 現在已經是頂部位置
 
         // 根據類型選擇顏色
         const colors = {
