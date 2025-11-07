@@ -338,15 +338,7 @@ class PetRunnerGame {
      */
     checkCollisions() {
         this.obstacles.forEach(obstacle => {
-            // 調試信息
-            if (Math.abs(this.pet.x - obstacle.x) < 100) {
-                console.log('Pet:', { x: this.pet.x, y: this.pet.y, width: this.pet.width, height: this.pet.height });
-                console.log('Obstacle:', { x: obstacle.x, y: obstacle.y, width: obstacle.width, height: obstacle.height });
-                console.log('Is Colliding:', this.isColliding(this.pet, obstacle));
-            }
-
             if (this.isColliding(this.pet, obstacle)) {
-                console.log('COLLISION DETECTED! Game Over!');
                 this.gameOver();
             }
         });
